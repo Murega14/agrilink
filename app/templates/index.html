@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agribusiness Landing Page</title>
+  <title>Agri Link</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="h-screen bg-green-50 p-2">
@@ -53,7 +53,7 @@
           </div>
 
           <button class="mt-8 bg-white text-green-700 px-8 py-3 rounded-lg hover:bg-green-50 transition-colors text-lg font-semibold">
-            Sign Up as Buyer
+            <a href="{{ url_for('authentication.login_buyer') }}">Sign Up as Buyer</a>
           </button>
         </div>
       </article>
@@ -93,7 +93,7 @@
           </div>
 
           <button class="mt-8 bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition-colors text-lg font-semibold">
-            Register as Farmer
+            <a href="{{ url_for('authentication.login_farmer') }}">Register as Farmer</a>
           </button>
         </div>
       </article>

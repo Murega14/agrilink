@@ -49,7 +49,6 @@ class Product(db.Model):
     name = db.Column(db.String(), nullable=False)
     price_per_unit = db.Column(db.Integer, nullable=False)
     description = db.Column(db.String(), nullable=False)
-    #image_url = db.Column(db.String())
     amount_available = db.Column(db.Integer, nullable=False)
     category = db.Column(db.String(), nullable=False)
     farmer_id = db.Column(db.Integer, db.ForeignKey('farmers.id'))

@@ -8,9 +8,12 @@
             <!-- Logo and Brand -->
             <div class="flex items-center justify-between lg:w-auto w-full">
                 <div class="flex items-center space-x-4">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                    </svg>
+                    <a href="{{ url_for('index') }}">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                        </svg>
+                    </a>
+                    
                     <span class="font-bold text-xl">AgriLink</span>
                 </div>
                 
@@ -36,11 +39,24 @@
                     <input type="text" id="search-bar" 
                            placeholder="Search products..." 
                            class="w-full p-2 pl-4 pr-12 text-gray-800 border border-green-200 rounded-lg shadow focus:outline-none focus:border-green-400">
-                    <button class="absolute right-0 top-0 h-full px-4 text-white bg-green-600 rounded-r-lg hover:bg-green-700 transition-colors duration-200">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                    </button>
+                           <script>
+                            function searchProductByName() {
+                              const productName = document.getElementById('search-bar').value;
+                              const url = `{{ url_for('products.view_by_name', name='') }}` + encodeURIComponent(productName);
+                              window.location.href = url;
+                            }
+                          </script>
+                          
+                          <button 
+                                class="absolute right-0 top-0 h-full px-4 text-white bg-green-600 rounded-r-lg hover:bg-green-700 transition-colors duration-200"
+                                onclick="searchProductByName()"
+                            >
+                          
+                           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                           </svg>
+                       </button>
+                       
                 </div>
             </div>
 
@@ -104,52 +120,11 @@
     </div>
 </main>
 <script>
-    
-    // Search functionality
-    const searchInput = document.getElementById('searchInput');
-    searchInput.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const products = document.querySelectorAll('.product-card');
-        
-        products.forEach(product => {
-            const productName = product.querySelector('h3').textContent.toLowerCase();
-            const productDescription = product.querySelector('p').textContent.toLowerCase();
-            
-            if (productName.includes(searchTerm) || productDescription.includes(searchTerm)) {
-                product.style.display = 'block';
-            } else {
-                product.style.display = 'none';
-            }
-        });
-    });
-
-    // Category filtering
-    const categoryButtons = document.querySelectorAll('.category-btn');
-    categoryButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            // Update active button styling
-            categoryButtons.forEach(btn => {
-                btn.classList.remove('bg-green-600', 'text-white');
-                btn.classList.add('bg-green-100', 'text-green-800');
-            });
-            button.classList.remove('bg-green-100', 'text-green-800');
-            button.classList.add('bg-green-600', 'text-white');
-
-            const selectedCategory = button.dataset.category;
-            const products = document.querySelectorAll('.product-card');
-            
-            products.forEach(product => {
-                if (selectedCategory === 'all' || product.dataset.category === selectedCategory) {
-                    product.style.display = 'block';
-                } else {
-                    product.style.display = 'none';
-                }
-            });
-        });
-    });
-
-    // Initial load
-    fetchProducts();
-
-</script>
+    function searchProductByName() {
+      const productName = document.getElementById('search-bar').value;
+      const url = `{{ url_for('products.view_by_name', name='') }}` + encodeURIComponent(productName);
+      window.location.href = url;
+    }
+  </script>
+  
 {% endblock %}

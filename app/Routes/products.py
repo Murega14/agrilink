@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request, session, render_template
 from ..models import db, Product, Farmer
 from .authentication import login_is_required
+from sqlalchemy import func
 
 products = Blueprint('products', __name__)
 
@@ -55,9 +56,9 @@ def view_products():
     return render_template('marketplace.html', product_list=product_list)
 
 @products.route('/view_products/category/<string:category>', methods=['GET'])
-@login_is_required
+#@login_is_required
 def view_by_category(category):
-    products_by_category = Product.query.filter_by(category=category).all()
+    products_by_category = Product.query.filter(func.lower(Product.category) == category.lower()).all()
     if not products_by_category:
         return jsonify({"error": "category not found"}), 404
     
@@ -66,14 +67,14 @@ def view_by_category(category):
             "description": product.description,
             "price": product.price_per_unit,
             "amount": product.amount_available,
-            "seller": product.farmer.name
+            "seller": f"{product.farmer.first_name} {product.farmer.last_name}"
         } for product in products_by_category]
     
         
     return jsonify(products)
 
 @products.route('/view_products/<int:product_id>', methods=['GET'])
-@login_is_required
+#@login_is_required
 def view_by_id(product_id):
     product_by_id = Product.query.filter_by(id=product_id).first()
     if not product_by_id:
@@ -90,9 +91,9 @@ def view_by_id(product_id):
     return jsonify(product_details)
 
 @products.route('/view_products/name/<string:name>', methods=['GET'])
-@login_is_required
+#@login_is_required
 def view_by_name(name):
-    product_by_name = Product.query.filter_by(name=name).all()
+    product_by_name = Product.query.filter(func.lower(Product.name) == name.lower()).all()
     if not product_by_name:
         return jsonify({"error": "product not found"}), 404
     
@@ -102,7 +103,7 @@ def view_by_name(name):
             "price": product.price_per_unit,
             "amount": product.amount_available,
             "category": product.category,
-            "seller": product.farmer.name
+            "seller": f"{product.farmer.first_name} {product.farmer.last_name}"
         } for product in product_by_name]
      
         

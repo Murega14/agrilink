@@ -21,7 +21,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         const data = await response.json();
 
         if (response.ok) {
-            window.location.href = '/dashboard'; // Redirect to dashboard on success
+            window.location.href = '/view_products'; // Redirect to dashboard on success
         } else {
             errorMessage.textContent = data.error || 'Login failed. Please try again.';
             errorAlert.classList.remove('hidden');

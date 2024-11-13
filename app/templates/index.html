@@ -1,96 +1,115 @@
-{% extends "base.html" %}
-
-{% block title %}Welcome to AgriLink{% endblock %}
-
-{% block content %}
-<div class="min-h-screen bg-green-50">
-    <!-- Hero Section -->
-    <div class="relative overflow-hidden">
-        <!-- Background Pattern -->
-        <div class="absolute inset-0 bg-gradient-to-b from-green-100 to-transparent"></div>
-        
-        <!-- Main Content -->
-        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-            <!-- Header -->
-            <div class="text-center mb-16">
-                <h1 class="text-4xl md:text-6xl font-bold text-green-800 mb-4">
-                    Welcome to AgriLink
-                </h1>
-                <p class="text-xl text-green-700 max-w-2xl mx-auto">
-                    Connecting farmers and buyers for a sustainable agricultural future
-                </p>
-            </div>
-
-            <!-- User Type Selection -->
-            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                <!-- Farmer Card -->
-                <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
-                    <div class="p-8">
-                        <div class="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mb-6 mx-auto">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                            </svg>
-                        </div>
-                        <h2 class="text-2xl font-bold text-center text-green-800 mb-4">I'm a Farmer</h2>
-                        <p class="text-gray-600 text-center mb-6">
-                            List your products and connect with buyers directly
-                        </p>
-                        <button class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
-                            <a href="{{ url_for('authentication.signup_farmer')}}">Continue as Farmer</a>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Buyer Card -->
-                <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
-                    <div class="p-8">
-                        <div class="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mb-6 mx-auto">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                            </svg>
-                        </div>
-                        <h2 class="text-2xl font-bold text-center text-green-800 mb-4">I'm a Buyer</h2>
-                        <p class="text-gray-600 text-center mb-6">
-                            Find fresh produce directly from local farmers
-                        </p>
-                        <button class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300">
-                            <a href="/login/buyer">Continue as Buyer</a>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Features Section -->
-            <div class="mt-20 grid md:grid-cols-3 gap-8 text-center">
-                <div>
-                    <div class="bg-green-100 rounded-full w-12 h-12 flex items-center justify-center mb-4 mx-auto">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-semibold text-green-800">Fast Connections</h3>
-                    <p class="text-gray-600 mt-2">Connect with partners in minutes</p>
-                </div>
-                <div>
-                    <div class="bg-green-100 rounded-full w-12 h-12 flex items-center justify-center mb-4 mx-auto">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-semibold text-green-800">Secure Platform</h3>
-                    <p class="text-gray-600 mt-2">Safe and verified transactions</p>
-                </div>
-                <div>
-                    <div class="bg-green-100 rounded-full w-12 h-12 flex items-center justify-center mb-4 mx-auto">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                        </svg>
-                    </div>
-                    <h3 class="text-lg font-semibold text-green-800">Fair Prices</h3>
-                    <p class="text-gray-600 mt-2">Competitive market rates</p>
-                </div>
-            </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agribusiness Landing Page</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="h-screen bg-green-50 p-2">
+  <main class="max-w-7xl mx-auto space-y-2 ">
+    <!-- Top Section -->
+    <div class="flex flex-col lg:flex-row gap-2 w-full">
+      <aside class="lg:w-1/2">
+        <div class="h-full relative rounded-lg overflow-hidden">
+          <img 
+            src="https://img.freepik.com/free-vector/farmer-collecting-fresh-natural-organic-vegetable-wood-box-preparation-trade-street-farm-eco-food-market_575670-488.jpg?t=st=1731482613~exp=1731486213~hmac=a1ed87a0c8befd4366afefce3315fa54e612cd51735b8bb42cc627d1ad4ce7c6&w=826" 
+            alt="Farmer harvesting fresh vegetables" 
+            class="w-full h-full object-cover"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-green-900/70 to-transparent"></div>
         </div>
+      </aside>
+
+      <article class="lg:w-1/2 bg-green-700 rounded-lg p-6 text-white">
+        <div class="h-full flex flex-col">
+          <h1 class="text-3xl font-bold mb-4">Fresh From Farm</h1>
+          <p class="text-lg mb-6">Source fresh, local produce directly from verified farmers in your area.</p>
+          
+          <div class="space-y-6 flex-grow">
+            <div class="flex items-start space-x-4">
+              <div class="bg-green-600 p-3 rounded-lg">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-xl">Quality Guaranteed</h3>
+                <p class="text-green-100">Every product verified for freshness and quality</p>
+              </div>
+            </div>
+
+            <div class="flex items-start space-x-4">
+              <div class="bg-green-600 p-3 rounded-lg">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-xl">Transparent Pricing</h3>
+                <p class="text-green-100">Direct farm-to-table pricing with no hidden fees</p>
+              </div>
+            </div>
+          </div>
+
+          <button class="mt-8 bg-white text-green-700 px-8 py-3 rounded-lg hover:bg-green-50 transition-colors text-lg font-semibold">
+            Sign Up as Buyer
+          </button>
+        </div>
+      </article>
     </div>
-</div>
-{% endblock %}
+
+    <!-- Bottom Section -->
+    <div class="flex flex-col lg:flex-row gap-2">
+      <article class="lg:w-1/2 bg-white rounded-lg p-6 shadow-lg order-2 lg:order-1">
+        <div class="h-full flex flex-col">
+          <h2 class="text-3xl font-bold text-green-800 mb-4">Farming Services</h2>
+          <p class="text-lg text-gray-600 mb-6">Join our network of agricultural producers and reach customers directly.</p>
+          
+          <div class="space-y-6 flex-grow">
+            <div class="flex items-start space-x-4">
+              <div class="bg-green-100 p-3 rounded-lg">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-xl text-green-800">Direct Distribution</h3>
+                <p class="text-gray-600">Connect with buyers without intermediaries</p>
+              </div>
+            </div>
+
+            <div class="flex items-start space-x-4">
+              <div class="bg-green-100 p-3 rounded-lg">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-xl text-green-800">Smart Management</h3>
+                <p class="text-gray-600">Tools to manage inventory and orders efficiently</p>
+              </div>
+            </div>
+          </div>
+
+          <button class="mt-8 bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition-colors text-lg font-semibold">
+            Register as Farmer
+          </button>
+        </div>
+      </article>
+
+      <aside class="lg:w-1/2 order-1 lg:order-2">
+        <div class="h-full relative rounded-lg overflow-hidden">
+          <img 
+            src="https://img.freepik.com/free-vector/cartoon-farm-landscape_23-2148172836.jpg?t=st=1731482740~exp=1731486340~hmac=db7f1b8da4c992973c6c404069be037f6f6613750867f28ddb69c72f4bdc74eb&w=740" 
+            alt="Farmer in the field" 
+            class="w-full h-full object-cover"
+          />
+          <div class="absolute inset-0 bg-gradient-to-t from-green-900/30 to-transparent"></div>
+        </div>
+      </aside>
+    </div>
+
+  </main>
+</body>
+</html>

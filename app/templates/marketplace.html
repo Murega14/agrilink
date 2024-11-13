@@ -95,28 +95,31 @@
         <!-- Additional categories as needed -->
     </div>
 
-    <div id="productsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {% for product in product_list %}
-        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 product-card" data-category="${product.category.toLowerCase()}">
-            <img src="https://www.ckl.africa/wp-content/uploads/2020/04/Tomato-Banner-Image.jpg.webp" alt="{{product.name}}" class="w-full h-48 object-cover"/>
-            <div class="p-4">
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="text-lg font-semibold text-gray-800">{{product.name}}</h3>
-                    <span class="text-green-600 font-bold">Ksh {{product.price}}</span>
-                </div>
-                <p class="text-gray-600 text-sm mb-2">{{product.description}}</p>
-                <div class="flex justify-between items-center mt-4">
-                    <span class="text-sm text-gray-500">Seller: {{product.seller}}</span>
-                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                        {{product.amount}}kg
-                    </span>
-                </div>
-                <button class="mt-4 w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition-colors duration-300">
-                    Add to Cart
-                </button>
-            </div>
-        </div>
-        {% endfor %}
+ <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+  {% for product in product_list %}
+  <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+    <div class="relative">
+      <img src="https://www.ckl.africa/wp-content/uploads/2020/04/Tomato-Banner-Image.jpg.webp" alt="{{product.name}}" class="w-full h-52 md:h-64 object-cover" />
+      <div class="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm">
+        {{product.amount}}kg
+      </div>
+    </div>
+    <div class="p-4">
+      <div class="flex justify-between items-start mb-2">
+        <h3 class="text-xl font-semibold text-gray-800 line-clamp-2">{{product.name}}</h3>
+        <span class="text-green-600 font-bold text-lg">Ksh {{product.price}}</span>
+      </div>
+      <p class="text-gray-600 text-sm mb-4 line-clamp-3">{{product.description}}</p>
+      <div class="flex justify-between items-center">
+        <span class="text-sm text-gray-500">Seller: {{product.seller}}</span>
+        <button class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors duration-300">
+          Add to Cart
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
     </div>
 </main>
 <script>

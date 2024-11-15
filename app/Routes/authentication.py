@@ -35,18 +35,19 @@ def verify_reset_token(token, expiration=5000):
 @authentication.route('/signup/farmer', methods=['GET', 'POST'])
 def signup_farmer():
     if request.method == 'POST':
-        data = request.get_json()
-        first_name = data.get('first_name')
-        last_name = data.get('last_name')
-        phone_number = data.get('phone_number')
-        email = data.get('email')
-        password = data.get('password')
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        phone_number = request.form.get('phone_number')
+        email = request.form.get('email')
+        password = request.form.get('password')
         
         if not all([first_name, last_name, phone_number, email, password]):
-            return jsonify({"error": "All fields are required"}), 403
+            flash("All fields are required")
+            return redirect('/signup/farmer')
         
         if Farmer.query.filter((Farmer.email == email) | (Farmer.phone_number == phone_number)).first():
-            return jsonify({"error": "Phone number or email already exists"}), 403
+            flash("Email or phone number exists")
+            return redirect('/signup/farmer')
         
         new_farmer = Farmer(first_name, last_name, phone_number, email)
         new_farmer.hash_password(password)
@@ -60,37 +61,38 @@ def signup_farmer():
 @authentication.route('/signup/buyer', methods=['GET', 'POST'])
 def signup_buyer():
     if request.method == 'POST':
-        data = request.get_json()
-        first_name = data.get('first_name')
-        last_name = data.get('last_name')
-        phone_number = data.get('phone_number')
-        email = data.get('email')
-        password = data.get('password')
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        email = request.form.get('email')
+        phone_number = request.form.get('phone_number')
+        password = request.form.get('password')
         
         if not all([first_name, last_name, phone_number, email, password]):
-            return jsonify({"error": "all fields are required"}), 403
+            flash('All fields are required')
+            return redirect('/signup/buyer')
         
         if Buyer.query.filter((Buyer.email == email) | (Buyer.phone_number == phone_number)).first():
-            return jsonify({"error": "email or phone number exists"}), 403
+            flash('Email or Phone number exists already')
+            return redirect('/signup/buyer')
         
         new_buyer = Buyer(first_name=first_name, last_name=last_name, phone_number=phone_number, email=email)
         new_buyer.hash_password(password)
         db.session.add(new_buyer)
         db.session.commit()
         
-        return jsonify({"message": "Buyer created Successfully"}), 201
+        return redirect('/view_products')
     
     return render_template('signup_buyer.html')
 
 @authentication.route('/login/farmer', methods=['GET', 'POST'])
 def login_farmer():
     if request.method == 'POST':
-        data = request.get_json()
-        identifier = data.get('identifier')
-        password = data.get('password')
+        identifier = request.form.get('identifier')
+        password = request.form.get('password')
         
         if not all([identifier, password]):
-            return jsonify({"error": "all fields are required"})
+            flash("All fields are required")
+            return redirect('/login/farmer')
         
         farmer = Farmer.query.filter((Farmer.email == identifier) | (Farmer.phone_number == identifier)).first()
         if farmer and farmer.check_password(password):
@@ -104,7 +106,7 @@ def login_farmer():
                                 httponly=True,
                                 secure=True)
             
-            return jsonify(response), 200
+            return redirect('/dashboard')
         else:
             return jsonify({"error": "we don't know you"}), 401
         
@@ -113,12 +115,12 @@ def login_farmer():
 @authentication.route('/login/buyer', methods=['GET', 'POST'])
 def login_buyer():
     if request.method == 'POST':
-        data = request.get_json()
-        identifier = data.get('identifier')
-        password = data.get('password')
+        identifier = request.form.get('identifier')
+        password = request.form.get('password')
         
         if not all([identifier, password]):
-            return jsonify({"error": "all fields are required"}), 401
+            flash("All fields are required")
+            return redirect('/login/buyer')
         
         buyer = Buyer.query.filter((Buyer.phone_number == identifier) | (Buyer.email == identifier)).first()
         if buyer and buyer.check_password(password):
@@ -132,9 +134,10 @@ def login_buyer():
                                 httponly=True,
                                 secure=True)
             
-            return jsonify(response), 200
+            return redirect('/view_products')
         else:
-            return jsonify({"error": "we don't know you"}), 401
+            flash("Err we don't know you")
+            return redirect('/login/buyer')
         
     return render_template('login_buyer.html')
 
@@ -177,7 +180,7 @@ def reset_password(token):
             user.hash_password(password)
             db.session.commit()
             flash('Your password has been reset successfully.', 'success')
-            return redirect(url_for('login'))
+            return redirect(url_for('index'))
         
     return render_template('reset_password.html')
 

@@ -35,6 +35,10 @@ def add_product():
     
     return jsonify({"message": "product added successfully"}), 200
 
+@products.route('/dashboard', methods=['GET'])
+def dashboard():
+    return render_template('dashboard.html')
+
 @products.route('/view_products', methods=['GET'])
 #@login_is_required
 def view_products():

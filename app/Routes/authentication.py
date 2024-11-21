@@ -67,13 +67,12 @@ def signup_buyer():
         phone_number = request.form.get('phone_number')
         password = request.form.get('password')
         
+        
         if not all([first_name, last_name, phone_number, email, password]):
             flash('All fields are required')
-            return redirect('/signup/buyer')
         
         if Buyer.query.filter((Buyer.email == email) | (Buyer.phone_number == phone_number)).first():
             flash('Email or Phone number exists already')
-            return redirect('/signup/buyer')
         
         new_buyer = Buyer(first_name=first_name, last_name=last_name, phone_number=phone_number, email=email)
         new_buyer.hash_password(password)
@@ -92,7 +91,6 @@ def login_farmer():
         
         if not all([identifier, password]):
             flash("All fields are required")
-            return redirect('/login/farmer')
         
         farmer = Farmer.query.filter((Farmer.email == identifier) | (Farmer.phone_number == identifier)).first()
         if farmer and farmer.check_password(password):
@@ -134,10 +132,9 @@ def login_buyer():
                                 httponly=True,
                                 secure=True)
             
-            return redirect('/view_products')
+            return redirect(url_for('products.view_products'))
         else:
             flash("Err we don't know you")
-            return redirect('/login/buyer')
         
     return render_template('login_buyer.html')
 
@@ -152,7 +149,7 @@ def forgot_password():
             token = generate_reset_token(user.email)
             reset_url = url_for('authentication.reset_password', token=token, _external=True)
             
-            msg = Message("Password Reset Request", sender="noreply@gmail.com", recipients=[email])
+            msg = Message("Password Reset Request", sender="tedmurega@gmail.com", recipients=[email])
             msg.body = f"To reset your password, click the following link: {reset_url}"
             mail.send(msg)
             

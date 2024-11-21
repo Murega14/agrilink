@@ -6,6 +6,7 @@ from flask_migrate import Migrate
 from .Routes.authentication import authentication
 from .Routes.products import products
 from .extensions import mail
+from flask_mail import Message
 
 
 app = Flask(__name__)
@@ -23,6 +24,15 @@ app.register_blueprint(products, url_prefix='')
 def index():
     return render_template('index.html')
 
+@app.route('/send_test_email')
+def send_test_email():
+    msg = Message('Test Email', sender=app.config['MAIL_USERNAME'], recipients=['recipient@example.com'])
+    msg.body = 'This is a test email.'
+    try:
+        mail.send(msg)
+        return "Email sent successfully!"
+    except Exception as e:
+        return str(e)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -6,6 +6,7 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from itsdangerous import URLSafeTimedSerializer
 from flask_mail import Message
 from ..extensions import mail
+import re
 
 authentication = Blueprint('authentication', __name__)
 
@@ -45,7 +46,15 @@ def signup_farmer():
             flash("All fields are required")
             return redirect('/signup/farmer')
         
-        if Farmer.query.filter((Farmer.email == email) | (Farmer.phone_number == phone_number)).first():
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            flash("Invalid email format")
+            return redirect('/signup/farmer')
+        
+        if not re.match(r"^\d{10}$", phone_number):
+            flash("Phone number must be 10 digits")
+            return redirect('/signup/farmer')
+        
+        if db.session.query(Farmer.id).filter((Farmer.email == email) | (Farmer.phone_number == phone_number)).first():
             flash("Email or phone number exists")
             return redirect('/signup/farmer')
         
@@ -70,8 +79,16 @@ def signup_buyer():
         
         if not all([first_name, last_name, phone_number, email, password]):
             flash('All fields are required')
+            
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            flash("Invalid email format")
+            return redirect('/signup/buyer')
         
-        if Buyer.query.filter((Buyer.email == email) | (Buyer.phone_number == phone_number)).first():
+        if not re.match(r"^\d{10}$", phone_number):
+            flash("Phone number must be 10 digits")
+            return redirect('/signup/buyer')
+        
+        if db.session.query(Buyer.id).filter((Buyer.email == email) | (Buyer.phone_number == phone_number)).first():
             flash('Email or Phone number exists already')
         
         new_buyer = Buyer(first_name=first_name, last_name=last_name, phone_number=phone_number, email=email)

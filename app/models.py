@@ -1,7 +1,13 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.ext.asyncio import AsyncAttrs
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import DeclarativeBase
 
-db = SQLAlchemy()
+class Base(AsyncAttrs, DeclarativeBase):
+    pass
+
+db = SQLAlchemy(model_class=Base)
 
 
 class Farmer(db.Model):
@@ -16,14 +22,19 @@ class Farmer(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, onupdate=db.func.current_timestamp())
     
-    products = db.relationship('Product', backref='farmer', lazy=True)  
-    orders = db.relationship('Order', backref='farmer', lazy=True)
+    # Changed to use back_populates instead of backref
+    products = db.relationship('Product', back_populates='farmer', lazy="selectin")  
+    orders = db.relationship('Order', backref='farmer', lazy="selectin")
     
     def hash_password(self, password):
         self.password_hash = generate_password_hash(password)
         
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    @hybrid_property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
     
 
 class Buyer(db.Model):
@@ -38,7 +49,7 @@ class Buyer(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, onupdate=db.func.current_timestamp())
     
-    orders = db.relationship('Order', backref='buyer', lazy=True)
+    orders = db.relationship('Order', backref='buyer', lazy="selectin")
     
     def hash_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -58,7 +69,9 @@ class Product(db.Model):
     category = db.Column(db.String(), nullable=False)
     farmer_id = db.Column(db.Integer, db.ForeignKey('farmers.id'))
     
-    order_items = db.relationship('OrderItem', backref='product', lazy=True)
+    order_items = db.relationship('OrderItem', backref='product', lazy="selectin")
+    # Changed to only use back_populates
+    farmer = db.relationship('Farmer', back_populates='products')
 
 
 class Order(db.Model):
@@ -73,8 +86,8 @@ class Order(db.Model):
     status = db.Column(db.Enum('pending', 'delivered', 'cancelled', 'refunded', name='order_status_enum'),
                        nullable=False, default='pending')
     
-    order_items = db.relationship('OrderItem', backref='order', lazy=True)
-    tracking = db.relationship('OrderTracking', backref='order', lazy=True)
+    order_items = db.relationship('OrderItem', backref='order', lazy="selectin")
+    tracking = db.relationship('OrderTracking', backref='order', lazy="selectin")
     
     def calculate_total_amount(self):
         return sum(item.calculate_item_total() for item in self.order_items)

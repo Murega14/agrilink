@@ -18,12 +18,16 @@ if not DATABASE_URI:
 if DATABASE_URI.startswith('postgresql://'):
     DATABASE_URI = DATABASE_URI.replace('postgresql://', 'postgresql+asyncpg://')
 
+# Updated engine configuration with correct asyncpg parameters
 engine = create_async_engine(
     DATABASE_URI,
     echo=True,
     pool_pre_ping=True,
     connect_args={
-        "statement_cache_size": 0,    }
+        "server_settings": {
+            "application_name": "AgriLink"
+        }
+    }
 )
 
 async_session = sessionmaker(

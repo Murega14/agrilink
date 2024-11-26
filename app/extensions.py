@@ -26,8 +26,8 @@ engine = create_async_engine(
     connect_args={
         "server_settings": {
             "application_name": "AgriLink",
-            "statement_cache_size": 0,
-            "prepared_statement_cache_size": 0
+            "statement_cache_size": "0",
+            "prepared_statement_cache_size": "0"
         }
     }
 )

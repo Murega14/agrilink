@@ -25,7 +25,9 @@ engine = create_async_engine(
     pool_pre_ping=True,
     connect_args={
         "server_settings": {
-            "application_name": "AgriLink"
+            "application_name": "AgriLink",
+            "statement_cache_size": 0,
+            "prepared_statement_cache_size": 0
         }
     }
 )

@@ -15,3 +15,4 @@ class Config:
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
     MAIL_USE_SSL = True
     MAIL_USE_TLS = False
+    JWT_SECRET_KEY = os.getenv('SECRET_KEY')

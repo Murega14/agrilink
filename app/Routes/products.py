@@ -7,6 +7,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
 import os
 from dotenv import load_dotenv
+from math import ceil
 
 products = Blueprint('products', __name__)
 
@@ -16,26 +17,36 @@ name_cache = {}
 
 @products.route('/view_products', methods=['GET'])
 async def view_products():
-    if 'products' in cache:
-        return render_template('marketplace.html', product_list=cache['products'])
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 16))
     
-    async with get_db() as session:
+    if 'products' in cache:
+        product_list=cache['products']
+    else:
+        async with get_db() as session:
         # The joinedload will now work because the farmer relationship is explicitly defined
-        stmt = select(Product).options(joinedload(Product.farmer))
-        result = await session.execute(stmt)
-        products = list(result.unique().scalars().all())
+            stmt = select(Product).options(joinedload(Product.farmer))
+            result = await session.execute(stmt)
+            products = list(result.unique().scalars().all())
         
-        product_list = [{
+            product_list = [{
             "name": product.name,
             "description": product.description,
             "price": product.price_per_unit,
             "amount": product.amount_available,
             "category": product.category,
             "seller": f"{product.farmer.first_name} {product.farmer.last_name}" if product.farmer else "Unknown Seller"
-        } for product in products]
+            } for product in products]
     
-    cache['products'] = product_list    
-    return render_template('marketplace.html', product_list=product_list)
+        cache['products'] = product_list
+    
+    total_items = len(product_list)
+    total_pages = ceil(total_items / per_page)
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated_products = product_list[start:end]
+        
+    return render_template('marketplace.html', product_list=product_list, page=page, total_pages=total_pages, per_page=per_page)
 
 @products.route('/view_products/category/<string:category>', methods=['GET'])
 async def view_by_category(category):

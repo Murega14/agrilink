@@ -58,12 +58,12 @@ def signup_farmer():
             flash("Email or phone number exists")
             return redirect('/signup/farmer')
         
-        new_farmer = Farmer(first_name, last_name, phone_number, email)
+        new_farmer = Farmer(first_name=first_name, last_name=last_name, phone_number=phone_number, email=email)
         new_farmer.hash_password(password)
         db.session.add(new_farmer)
         db.session.commit()
         
-        return jsonify({"message": "Farmer account created successfully"}), 201
+        return redirect('/dashboard')
 
     return render_template('signup_farmer.html')
 
@@ -116,12 +116,15 @@ def login_farmer():
             response = make_response(jsonify({
                 "login": "sucess"
             })), 201
-            response.set_cookie("session_token",
-                                access_token,
-                                httponly=True,
-                                secure=True)
+            response = make_response(redirect(url_for('products.dashboard')))
+            response.set_cookie(
+                "session_token",
+                access_token,
+                httponly=True,
+                secure=True
+            )
             
-            return redirect('/dashboard')
+            return response
         else:
             return jsonify({"error": "we don't know you"}), 401
         
@@ -141,15 +144,16 @@ def login_buyer():
         if buyer and buyer.check_password(password):
             expires = timedelta(hours=2)
             access_token = create_access_token(identity=buyer.id, expires_delta=expires)
-            response = make_response(jsonify({
-                "login": "success"
-            })), 201
-            response.set_cookie("session_token",
-                                access_token,
-                                httponly=True,
-                                secure=True)
+            response = make_response(redirect(url_for('products.view_products')))
+            response.set_cookie(
+                "session_token",
+                access_token,
+                httponly=True,
+                secure=True
+            )
             
-            return redirect(url_for('products.view_products'))
+            return response
+            
         else:
             flash("Err we don't know you")
         

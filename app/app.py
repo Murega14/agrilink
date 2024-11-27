@@ -7,12 +7,16 @@ from .Routes.products import products
 from .Routes.dashboard import dashboard
 from .extensions import mail
 from asgiref.wsgi import WsgiToAsgi
+from flask_jwt_extended import JWTManager
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
 mail.init_app(app)
 migrate = Migrate(app, db)
+jwt = JWTManager()
+jwt.init_app(app)
 
 # Register blueprints
 app.register_blueprint(authentication, url_prefix='')

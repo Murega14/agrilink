@@ -36,7 +36,7 @@ async def view_products():
     
     cache['products'] = product_list    
     return render_template('marketplace.html', product_list=product_list)
-# Similar fixes should be applied to other routes
+
 @products.route('/view_products/category/<string:category>', methods=['GET'])
 async def view_by_category(category):
     if category in category_cache:

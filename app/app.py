@@ -1,12 +1,11 @@
-# app/app.py
 from flask import Flask, render_template
 from config import Config
 from .models import db
 from flask_migrate import Migrate
 from .Routes.authentication import authentication
 from .Routes.products import products
+from .Routes.dashboard import dashboard
 from .extensions import mail
-from flask_mail import Message
 from asgiref.wsgi import WsgiToAsgi
 
 app = Flask(__name__)
@@ -18,6 +17,7 @@ migrate = Migrate(app, db)
 # Register blueprints
 app.register_blueprint(authentication, url_prefix='')
 app.register_blueprint(products, url_prefix='')
+app.register_blueprint(dashboard, url_prefix='')
 
 @app.route('/')
 async def index():

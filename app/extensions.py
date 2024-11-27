@@ -1,4 +1,3 @@
-# app/extensions.py
 from flask_mail import Mail
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker

@@ -10,16 +10,6 @@ import re
 
 authentication = Blueprint('authentication', __name__)
 
-def login_is_required(function):
-    @wraps(function)
-    def wrapper(*args, **kwargs):
-        if "id" not in session:
-            return abort(401)
-        else:
-            return function(*args, **kwargs)
-    wrapper.__name__ = function.__name__
-    return wrapper
-
 def generate_reset_token(email):
     serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     return serializer.dumps(email, salt='password-reset-salt')

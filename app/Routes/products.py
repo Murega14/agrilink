@@ -1,85 +1,32 @@
 from flask import Blueprint, jsonify, request, session, render_template
 from ..models import db, Product, Farmer
-from .authentication import login_is_required
+from ..wrappers import cache_result, AsyncTTLCache, async_route
 from sqlalchemy import func
 from ..extensions import get_db
 from sqlalchemy.future import select
 from sqlalchemy.orm import joinedload
-import os
-from dotenv import load_dotenv
+
 from math import ceil
-import asyncio
-import functools
-import time
 
 products = Blueprint('products', __name__)
-
-class AsyncTTLCache:
-    def __init__(self, maxsize=128, ttl=300):
-        self._cache = {}
-        self._maxsize = maxsize
-        self._ttl = ttl
-        
-    def get(self, key):
-        if key in self._cache:
-            item, timestamp = self._cache[key]
-            if time.time() - timestamp < self._ttl:
-                return item
-            else:
-                del self._cache[key]
-                
-        return None
-    
-    def set(self, key, value):
-        if len(self._cache) >= self._maxsize:
-            oldest_key = min(self._cache, key=lambda k: self._cache[k][1])
-            del self._cache[oldest_key]
-            
-        self._cache[key] = (value, time.time())
-        
-    def clear(self, key=None):
-        if key:
-            self._cache.pop(key, None)
-        else:
-            self._cache.clear()
-        
 
 cache = AsyncTTLCache()
 category_cache = AsyncTTLCache()
 name_cache = AsyncTTLCache()
 
-def cache_result(cache_object):
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
-            #generating a unique cache key 
-            cache_key = str(args) + str(kwargs)
-            #checking cache
-            cached_result = cache_object.get(cache_key)
-            if cached_result is not None:
-                return cached_result
-            
-            result = await func(*args, **kwargs)
-            cache_object.set(cache_key, result)
-            
-            return result
-        return wrapper
-    return decorator
-
 @products.route('/view_products', methods=['GET'])
 @cache_result(cache)
+@async_route
 async def view_products():
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 16))
     
     
     async with get_db() as session:
-        # The joinedload will now work because the farmer relationship is explicitly defined
         total_products = await session.execute(select(func.count(Product.id)))
         total_products = total_products.scalar()
         total_pages = ceil(total_products / per_page)
         
-        # Fetch paginated products
         stmt = (
                 select(Product)
                 .options(joinedload(Product.farmer))
@@ -103,6 +50,7 @@ async def view_products():
 
 @products.route('/view_products/category/<string:category>', methods=['GET'])
 @cache_result(category_cache)
+@async_route
 async def view_by_category(category):
     async with get_db() as session:
         stmt = (
@@ -129,6 +77,7 @@ async def view_by_category(category):
     return jsonify(products)
 
 @products.route('/view_products/<int:product_id>', methods=['GET'])
+@async_route
 async def view_by_id(product_id):
     async with get_db() as session:
         stmt = select(Product).options(joinedload(Product.farmer)).filter(Product.id == product_id)
@@ -152,6 +101,7 @@ async def view_by_id(product_id):
 
 @products.route('/view_products/name/<string:name>', methods=['GET'])
 @cache_result(name_cache)
+@async_route
 async def view_by_name(name):
     async with get_db() as session:
         stmt = (
@@ -178,6 +128,7 @@ async def view_by_name(name):
     return jsonify(product_list)
 
 @products.route('/clear_cache', methods=['POST'])
+@async_route
 async def clear_cache():
     cache.clear()
     category_cache.clear()

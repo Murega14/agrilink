@@ -38,29 +38,23 @@ async_session = sessionmaker(
     autoflush=False
 )
 
-# Separate connection pool creation using asyncpg
 async def initialize_database():
-    """
-    Create an asyncpg connection pool with comprehensive error handling and logging
-    """
     try:
-        # Parse connection parameters
         db_params = parse_database_uri(DATABASE_URI)
         
-        # Create connection pool
         pool = await asyncpg.create_pool(
             host=db_params['host'],
             port=db_params.get('port', 5432),
             user=db_params['user'],
             password=db_params['password'],
             database=db_params['database'],
-            min_size=10,
-            max_size=20,
-            max_queries=50000,
-            max_inactive_connection_lifetime=300.0,
+            min_size=5,
+            max_size=10,
+            max_queries=10000,
+            max_inactive_connection_lifetime=180.0,
+            statement_cache_size=0
         )
         
-        # Verify pool functionality
         await verify_connection_pool(pool)
         
         logger.info("Database connection pool initialized successfully")

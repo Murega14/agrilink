@@ -35,12 +35,10 @@ app.register_blueprint(dashboard, url_prefix='')
 # Global variable to store database pool
 db_pool = None
 
-@app.before_request
-def initialize_pool():
+with app.app_context():
     """
     Initialize database connection pool before first request
     """
-    global db_pool
     try:
         db_pool = asyncio.run(initialize_database())
         logger.info("Database connection pool initialized successfully")

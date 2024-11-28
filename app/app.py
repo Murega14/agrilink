@@ -35,7 +35,7 @@ app.register_blueprint(dashboard, url_prefix='')
 # Global variable to store database pool
 db_pool = None
 
-@app.before_first_request
+@app.before_request
 def initialize_pool():
     """
     Initialize database connection pool before first request

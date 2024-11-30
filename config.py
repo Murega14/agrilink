@@ -8,7 +8,6 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY')
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URI')
-    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "echo": True,}
     MAIL_SERVER = 'smtp.gmail.com'
     MAIL_PORT = 465
     MAIL_USERNAME = os.getenv('MAIL_USERNAME')

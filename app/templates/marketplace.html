@@ -1,38 +1,82 @@
 {% extends 'base.html' %}
 {% block title %} Marketplace {% endblock %}
 {% block content %}
-
-<div class="container mx-auto px-4 py-3">
-    <div class="flex flex-col lg:flex-row lg:items-center gap-4">
-        <div class="flex items-center justify-between lg:w-auto w-full">
-            <div class="flex items-center space-x-4">
-                <a href="{{ url_for('index') }}">
-                    <img src="data:image/svg+xml;base64,PHN2ZyBjbGFzcz0idy04IGgtOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAyNCAyNCI+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTMgMTJsMi0ybTAgMGw3LTcgNyA3TTUgMTB2MTBhMSAxIDAgMDAxIDFoM20xMC0xMWwyIDJtLTItMnYxMGExIDEgMCAwMS0xIDFoLTNtLTYgMGExIDEgMCAwMDEtMXYtNGExIDEgMCAwMTEtMWgyYTEgMSAwIDAxMSAxdjRhMSAxIDAgMDAxIDFtLTYgMGg2Ij4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIDwvcGF0aD4KICAgICAgICAgICAgICAgICAgICAgICAgPC9zdmc+" class="w-8 h-8" alt="Home">
-                </a>
-                <span class="font-bold text-xl">AgriLink</span>
+<nav class="bg-green-800 text-white">
+    <div class="container mx-auto px-4 py-3">
+        <!-- Upper Nav Section -->
+        <div class="flex flex-col lg:flex-row lg:items-center gap-4">
+            <!-- Logo and Brand -->
+            <div class="flex items-center justify-between lg:w-auto w-full">
+                <div class="flex items-center space-x-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                    <span class="font-bold text-xl">AgriLink</span>
+                </div>
+                
+                <!-- Mobile Icons -->
+                <div class="flex items-center space-x-4 lg:hidden">
+                    <button class="hover:text-green-200 transition-colors duration-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                    </button>
+                    <button id="cartButton" class="hover:text-green-200 transition-colors duration-200 relative">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <span id="cartCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                    </button>
+                </div>
             </div>
 
-            <div class="flex items-center space-x-4 lg:hidden">
-                <img src="data:image/svg+xml;base64,PHN2ZyBjbGFzcz0idy02IGgtNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAyNCAyNCI+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTE2IDdhNCA0IDAgMTEtOCAwIDQgNCAwIDAxOCAwek0xMiAxNGE3IDcgMCAwMC03IDdoMTRhNyA3IDAgMDAtNy03eiIgLz4KICAgICAgICAgICAgICAgICAgICAgICAgPC9zdmc+" class="w-6 h-6" alt="Profile">
-                <img src="data:image/svg+xml;base64,PHN2ZyBjbGFzcz0idy02IGgtNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAyNCAyNCI+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTMgM2gybC40IDJNNyAxM2gxMGw0LThINS40TTcgMTNMNS40IDVNNyAxM2wtMi4yOTMgMi4yOTNjLS42My42My0uMTg0IDEuNzA3LjcwNyAxLjcwN0gxN20wIDBhMiAyIDAgMTAwIDQgMiAyIDAgMDAwLTR6bS04IDJhMiAyIDAgMTEtNCAwIDIgMiAwIDAxNCAweiI+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8L3BhdGg+CiAgICAgICAgICAgICAgICAgICAgICAgIDwvc3ZnPg==" class="w-6 h-6" alt="Cart">
-                <span id="cartCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+            <!-- Search Bar -->
+            <div class="flex-grow">
+                <div class="relative">
+                    <input type="text" id="search-bar" 
+                           placeholder="Search products..." 
+                           class="w-full p-2 pl-4 pr-12 text-gray-800 border border-green-200 rounded-lg shadow focus:outline-none focus:border-green-400">
+                    <button class="absolute right-0 top-0 h-full px-4 text-white bg-green-600 rounded-r-lg hover:bg-green-700 transition-colors duration-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <div class="flex-grow relative">
-            <img src="data:image/svg+xml;base64,PHN2ZyBjbGFzcz0idy01IGgtNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAyNCAyNCI+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTIxIDIxbC02LTZtMi01YTcgNyAwIDExLTE0IDAgNyA3IDAgMDExNCAweiIgLz4KICAgICAgICAgICAgICAgICAgICAgICAgPC9zdmc+" class="w-5 h-5" alt="Search">
-        </div>
-
-        <div class="hidden lg:flex items-center space-x-4">
-            Sort by Price: Low to High | Price: High to Low | Name: A to Z | Name: Z to A
-            <img src="data:image/svg+xml;base64,PHN2ZyBjbGFzcz0idy02IGgtNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAyNCAyNCI+CiAgICAgICAgICAgICAgICAgICAgICAgIDxwYXRoIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSIyIiBkPSJNMTYgN2E0IDQgMCAxMS04IDAgNCA0IDAgMDE4IDB6TTEyIDE0YTcgNyAwIDAwLTcgN2gxNGE3IDcgMCAwMC03LTd6IiAvPgogICAgICAgICAgICAgICAgICAgIDwvc3ZnPg==" class="w-6 h-6" alt="Profile">
-            <img src="data:image/svg+xml;base64,PHN2ZyBjbGFzcz0idy02IGgtNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHZpZXdib3g9IjAgMCAyNCAyNCI+CiAgICAgICAgICAgICAgICAgICAgICAgIDxwYXRoIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgc3Ryb2tlLXdpZHRoPSIyIiBkPSJNMyAzaDJsLjQgMk03IDEzaDEwbDQtOEg1LjRNNyAxM0w1LjQgNU03IDEzbC0yLjI5MyAyLjI5M2MtLjYzLjYzLS4xODQgMS43MDcuNzA3IDEuNzA3SDE3bTAgMGEyIDIgMCAxMDAgNCAyIDIgMCAwMDAtNHptLTggMmEyIDIgMCAxMS00IDAgMiAyIDAgMDE0IDB6Ij4KICAgICAgICAgICAgICAgICAgICAgICAgPC9wYXRoPgogICAgICAgICAgICAgICAgICAgIDwvc3ZnPg==" class="w-6 h-6" alt="Cart">
-            <span id="cartCount-desktop" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+            <!-- Desktop Actions -->
+            <div class="hidden lg:flex items-center space-x-4">
+                <select id="sortSelect" class="bg-green-700 text-white px-4 py-2 rounded-lg border border-green-600 focus:outline-none focus:border-green-500 hover:bg-green-600 transition-colors duration-200">
+                    <option value="default">Sort by</option>
+                    <option value="price-asc">Price: Low to High</option>
+                    <option value="price-desc">Price: High to Low</option>
+                    <option value="name-asc">Name: A to Z</option>
+                    <option value="name-desc">Name: Z to A</option>
+                </select>
+                <button class="hover:text-green-200 transition-colors duration-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                </button>
+                <button id="cartButton-desktop" class="hover:text-green-200 transition-colors duration-200 relative">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <span id="cartCount-desktop" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                </button>
+            </div>
         </div>
     </div>
-
+</nav>
+<main class="container mx-auto px-4 py-8">
+    <!-- Category Slider -->
     <div class="category-slider overflow-x-auto whitespace-nowrap py-4 mb-6 border-b border-green-200">
-        Vegetables | Fruits | Dairy | Grains
+        <!-- Replace with dynamic categories from backend -->
+        <button class="inline-block px-4 py-2 m-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full hover:bg-green-200 focus:outline-none">Vegetables</button>
+        <button class="inline-block px-4 py-2 m-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full hover:bg-green-200 focus:outline-none">Fruits</button>
+        <button class="inline-block px-4 py-2 m-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full hover:bg-green-200 focus:outline-none">Dairy</button>
+        <button class="inline-block px-4 py-2 m-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full hover:bg-green-200 focus:outline-none">Grains</button>
+        <!-- Additional categories as needed -->
     </div>
 
     <div class="container mx-auto px-4 py-8" role="main">
@@ -99,4 +143,5 @@
         {% endif %}
     </div>
 </div>
+</main>
 {% endblock %}

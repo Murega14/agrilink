@@ -1,14 +1,8 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import DeclarativeBase
 
-class Base(AsyncAttrs, DeclarativeBase):
-    pass
-
-db = SQLAlchemy(model_class=Base)
-
+db = SQLAlchemy()
 
 class Farmer(db.Model):
     __tablename__ = 'farmers'
@@ -70,7 +64,6 @@ class Product(db.Model):
     farmer_id = db.Column(db.Integer, db.ForeignKey('farmers.id'))
     
     order_items = db.relationship('OrderItem', backref='product', lazy="selectin")
-    # Changed to only use back_populates
     farmer = db.relationship('Farmer', back_populates='products')
 
 

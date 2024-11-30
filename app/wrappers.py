@@ -48,20 +48,46 @@ class AsyncTTLCache:
         else:
             self._cache.clear()
         
+from functools import wraps
+import inspect
+
 def cache_result(cache_object):
     def decorator(func):
         @wraps(func)
-        async def wrapper(*args, **kwargs):
-            #generating a unique cache key 
+        async def async_wrapper(*args, **kwargs):
+            # Generate a unique cache key
             cache_key = str(args) + str(kwargs)
-            #checking cache
+            
+            # Check the cache
             cached_result = cache_object.get(cache_key)
             if cached_result is not None:
                 return cached_result
             
+            # Call the async function and cache the result
             result = await func(*args, **kwargs)
             cache_object.set(cache_key, result)
             
             return result
-        return wrapper
+
+        @wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            # Generate a unique cache key
+            cache_key = str(args) + str(kwargs)
+            
+            # Check the cache
+            cached_result = cache_object.get(cache_key)
+            if cached_result is not None:
+                return cached_result
+            
+            # Call the sync function and cache the result
+            result = func(*args, **kwargs)
+            cache_object.set(cache_key, result)
+            
+            return result
+
+        # Choose the appropriate wrapper based on whether the function is async
+        if inspect.iscoroutinefunction(func):
+            return async_wrapper
+        else:
+            return sync_wrapper
     return decorator

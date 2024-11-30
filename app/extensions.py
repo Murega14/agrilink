@@ -15,7 +15,7 @@ load_dotenv()
 
 mail = Mail()
 
-DATABASE_URI = os.getenv('DATABASE_URI')
+"""DATABASE_URI = os.getenv('DATABASE_URI')
 if not DATABASE_URI:
     raise ValueError("DATABASE URI not set")
 
@@ -65,9 +65,7 @@ async def initialize_database():
         raise
 
 async def verify_connection_pool(pool):
-    """
-    Verify the functionality of the connection pool
-    """
+   
     try:
         async with pool.acquire() as conn:
             # Simple health check query
@@ -83,9 +81,7 @@ async def verify_connection_pool(pool):
         raise
 
 def parse_database_uri(uri):
-    """
-    Parse database URI into components for asyncpg connection
-    """
+
     from urllib.parse import urlparse, parse_qs
     parsed = urlparse(uri)
     
@@ -104,9 +100,7 @@ def parse_database_uri(uri):
 
 @asynccontextmanager
 async def get_db():
-    """
-    Async context manager for database sessions with enhanced error handling
-    """
+  
     async with async_session() as session:
         try:
             yield session
@@ -119,9 +113,7 @@ async def get_db():
             await session.close()
 
 async def monitor_connection_pool(pool):
-    """
-    Background task to periodically log connection pool status
-    """
+ 
     while True:
         try:
             logger.info(f"Connection Pool Status:")
@@ -131,3 +123,4 @@ async def monitor_connection_pool(pool):
         except Exception as e:
             logger.error(f"Pool monitoring error: {e}")
             break
+        """

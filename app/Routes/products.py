@@ -51,7 +51,7 @@ def view_products():
             "price": product.price_per_unit,
             "amount": product.amount_available,
             "category": product.category,
-            "seller": f"{product.farmer.first_name} {product.farmer.last_name}"
+            "seller": product.farmer.full_name
         }
         product_list.append(product_details)
 

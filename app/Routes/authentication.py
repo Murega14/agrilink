@@ -106,7 +106,7 @@ def login_farmer():
             response = make_response(jsonify({
                 "login": "sucess"
             })), 201
-            response = make_response(redirect('/dashboard '))
+            response = make_response(redirect(url_for('dashboard.view_dashboard')))
             response.set_cookie(
                 "session_token",
                 access_token,

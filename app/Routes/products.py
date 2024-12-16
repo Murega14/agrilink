@@ -5,7 +5,7 @@ from sqlalchemy import func
 
 products = Blueprint('products', __name__)
 
-@products.route('/add_product', methods=['POST'])
+@products.route('/products/add', methods=['POST'])
 @login_is_required
 def add_product():
     data = request.get_json()
@@ -35,7 +35,7 @@ def add_product():
     
     return jsonify({"message": "product added successfully"}), 200
 
-@products.route('/view_products', methods=['GET'])
+@products.route('/products', methods=['GET'])
 def view_products():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 12, type=int)
@@ -55,15 +55,9 @@ def view_products():
         }
         product_list.append(product_details)
 
-    return render_template(
-        'marketplace.html',
-        product_list=product_list,
-        page=page,
-        per_page=per_page,
-        total_pages=pagination.pages
-    )
+    return jsonify(product_list)
 
-@products.route('/view_products/category/<string:category>', methods=['GET'])
+@products.route('/products/category/<string:category>', methods=['GET'])
 #@login_is_required
 def view_by_category(category):
     products_by_category = Product.query.filter(func.lower(Product.category) == category.lower()).all()
@@ -81,7 +75,7 @@ def view_by_category(category):
         
     return jsonify(products)
 
-@products.route('/view_products/<int:product_id>', methods=['GET'])
+@products.route('/products/<int:product_id>', methods=['GET'])
 #@login_is_required
 def view_by_id(product_id):
     product_by_id = Product.query.filter_by(id=product_id).first()
@@ -98,7 +92,7 @@ def view_by_id(product_id):
     
     return jsonify(product_details)
 
-@products.route('/view_products/name/<string:name>', methods=['GET'])
+@products.route('/products/name/<string:name>', methods=['GET'])
 #@login_is_required
 def view_by_name(name):
     product_by_name = Product.query.filter(func.lower(Product.name) == name.lower()).all()

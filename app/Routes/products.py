@@ -64,7 +64,7 @@ def view_products():
         }
         product_list.append(product_details)
 
-    return jsonify(product_list)    return jsonify(product_list)
+    return jsonify(product_list)
 
 @products.route('/products/category/<string:category>', methods=['GET'])
 #@login_is_required

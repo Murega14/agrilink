@@ -46,6 +46,7 @@ def view_products():
     product_list = []
     for product in products:
         product_details = {
+            "id": product.id,
             "name": product.name,
             "description": product.description,
             "price": product.price_per_unit,

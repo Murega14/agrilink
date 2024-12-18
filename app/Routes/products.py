@@ -41,8 +41,14 @@ def add_product():
 def view_products():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 12, type=int)
+    search_query = request.args.get('search', '', type=str)
     
-    pagination = Product.query.paginate(page=page, per_page=per_page)
+    query = Product.query
+
+    if search_query:
+        query = query.filter(Product.name.ilike(f'%{search_query}%'))
+
+    pagination = query.paginate(page=page, per_page=per_page)
     products = pagination.items
 
     product_list = []
@@ -58,7 +64,7 @@ def view_products():
         }
         product_list.append(product_details)
 
-    return jsonify(product_list)
+    return jsonify(product_list)    return jsonify(product_list)
 
 @products.route('/products/category/<string:category>', methods=['GET'])
 #@login_is_required

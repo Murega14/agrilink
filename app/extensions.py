@@ -7,6 +7,7 @@ import os
 from flask_mail import Mail
 import asyncio
 import logging
+from flask_caching import Cache
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 mail = Mail()
+cache = Cache()
 
 """DATABASE_URI = os.getenv('DATABASE_URI')
 if not DATABASE_URI:

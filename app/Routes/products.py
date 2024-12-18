@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request, session, render_template
 from ..models import db, Product, Farmer
 from ..wrappers import login_is_required
+from ..extensions import cache
 from sqlalchemy import func
 
 products = Blueprint('products', __name__)
@@ -36,6 +37,7 @@ def add_product():
     return jsonify({"message": "product added successfully"}), 200
 
 @products.route('/products', methods=['GET'])
+@cache.cached()
 def view_products():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 12, type=int)

@@ -5,7 +5,7 @@ from flask_migrate import Migrate
 from .Routes.authentication import authentication
 from .Routes.products import products
 from .Routes.dashboard import dashboard
-from .extensions import mail
+from .extensions import mail, cache
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 
@@ -18,6 +18,7 @@ mail.init_app(app)
 migrate = Migrate(app, db)
 jwt = JWTManager()
 jwt.init_app(app)
+cache.init_app(app)
 CORS(app, supports_credentials=True)
 
 # Register blueprints

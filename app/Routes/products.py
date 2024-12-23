@@ -7,7 +7,7 @@ from sqlalchemy import func
 products = Blueprint('products', __name__)
 
 @products.route('/api/v1/products/add', methods=['POST'])
-@login_is_required
+#@login_is_required
 def add_product():
     data = request.get_json()
     user_id = session.get('id')
@@ -37,7 +37,7 @@ def add_product():
     return jsonify({"message": "product added successfully"}), 200
 
 @products.route('/api/v1/products', methods=['GET'])
-@login_is_required
+#@login_is_required
 def view_products():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 12, type=int)

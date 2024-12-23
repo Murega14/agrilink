@@ -6,7 +6,7 @@ from ..wrappers import login_is_required
 dashboard = Blueprint('dashboard', __name__)
 
 @dashboard.route('/api/dashboard/stats', methods=['GET'])
-@login_is_required
+#@login_is_required
 def view_dashboard():
     user_id = session.get('id')
     
@@ -38,7 +38,7 @@ def view_dashboard():
     })
     
 @dashboard.route('/api/dashboard/recent-orders', methods=['GET'])
-@login_is_required
+#@login_is_required
 def get_recent_orders():
     user_id = session.get('id')
     
@@ -58,7 +58,7 @@ def get_recent_orders():
     return jsonify(orders_list)
 
 @dashboard.route('/api/dashboard/available-products', methods=['GET'])
-@login_is_required
+#@login_is_required
 def get_available_products():
     user_id = session.get('id')
     

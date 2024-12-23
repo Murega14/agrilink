@@ -6,7 +6,7 @@ from sqlalchemy import func
 
 products = Blueprint('products', __name__)
 
-@products.route('/products/add', methods=['POST'])
+@products.route('/api/v1/products/add', methods=['POST'])
 @login_is_required
 def add_product():
     data = request.get_json()
@@ -66,7 +66,7 @@ def view_products():
 
     return jsonify(product_list)
 
-@products.route('/products/category/<string:category>', methods=['GET'])
+@products.route('/api/v1/products/category/<string:category>', methods=['GET'])
 #@login_is_required
 def view_by_category(category):
     products_by_category = Product.query.filter(func.lower(Product.category) == category.lower()).all()
@@ -84,7 +84,7 @@ def view_by_category(category):
         
     return jsonify(products)
 
-@products.route('/products/<int:product_id>', methods=['GET'])
+@products.route('/api/v1/products/<int:product_id>', methods=['GET'])
 #@login_is_required
 def view_by_id(product_id):
     product_by_id = Product.query.filter_by(id=product_id).first()
@@ -101,7 +101,7 @@ def view_by_id(product_id):
     
     return jsonify(product_details)
 
-@products.route('/products/name/<string:name>', methods=['GET'])
+@products.route('/api/v1/products/name/<string:name>', methods=['GET'])
 #@login_is_required
 def view_by_name(name):
     product_by_name = Product.query.filter(func.lower(Product.name) == name.lower()).all()

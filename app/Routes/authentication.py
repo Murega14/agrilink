@@ -23,7 +23,7 @@ def verify_reset_token(token, expiration=5000):
     return email
 
 
-@authentication.route('/signup/farmer', methods=['POST'])
+@authentication.route('/api/v1/signup/farmer', methods=['POST'])
 def signup_farmer():
     data = request.get_json()
     first_name = data.get('first_name')
@@ -51,7 +51,7 @@ def signup_farmer():
         
     return jsonify({"success": "farmer account created sucessfully"}), 201
 
-@authentication.route('/signup/buyer', methods=['POST'])
+@authentication.route('/api/v1/signup/buyer', methods=['POST'])
 def signup_buyer():
     data = request.get_json()
     first_name = data.get('first_name')
@@ -80,7 +80,7 @@ def signup_buyer():
     return jsonify({"success": "buyer account created sucessfully"}), 201
 
 
-@authentication.route('/login/farmer', methods=['POST'])
+@authentication.route('/api/v1/login/farmer', methods=['POST'])
 def login_farmer():
     data = request.get_json()
     identifier = data.get('identifier')
@@ -113,7 +113,7 @@ def login_farmer():
         return jsonify({"error": "we don't know you"}), 401
         
 
-@authentication.route('/login/buyer', methods=['POST'])
+@authentication.route('/api/v1/login/buyer', methods=['POST'])
 def login_buyer():
     data = request.get_json()
     identifier = data.get('identifier')
@@ -143,7 +143,7 @@ def login_buyer():
     else:
         return jsonify({"error": "we don't know you"}), 401
 
-@authentication.route('/forgot_password', methods=['GET', 'POST'])
+@authentication.route('/api/v1/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email')
@@ -168,7 +168,7 @@ def forgot_password():
 
            
 
-@authentication.route('/reset_password/<token>', methods=['GET', 'POST'])
+@authentication.route('/api/v1/reset_password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
     email = verify_reset_token(token)
     if not email:

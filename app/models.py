@@ -61,6 +61,7 @@ class Product(db.Model):
     amount_available = db.Column(db.Integer, nullable=False)
     category = db.Column(db.String(), nullable=False)
     farmer_id = db.Column(db.Integer, db.ForeignKey('farmers.id'))
+    status = db.Column(db.Enum('available', 'out of stock', name='product_status_enum'), default='available')
     
     order_items = db.relationship('OrderItem', backref='product', lazy="selectin")
     farmer = db.relationship('Farmer', back_populates='products')

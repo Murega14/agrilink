@@ -27,9 +27,5 @@ app.register_blueprint(products, url_prefix='')
 app.register_blueprint(dashboard, url_prefix='')
 
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
 if __name__ == '__main__':
     app.run(debug=True)

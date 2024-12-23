@@ -7,6 +7,8 @@ from itsdangerous import URLSafeTimedSerializer
 from flask_mail import Message
 from ..extensions import mail
 import re
+from sqlalchemy.exc import SQLAlchemyError
+
 
 authentication = Blueprint('authentication', __name__)
 
@@ -82,36 +84,63 @@ def signup_buyer():
 
 @authentication.route('/api/v1/login/farmer', methods=['POST'])
 def login_farmer():
-    data = request.get_json()
-    identifier = data.get('identifier')
-    password = data.get('password')
+    try:
+        if not request.is_json:
+            return jsonify({"error": "Missing JSON in request"}), 400
+            
+        data = request.get_json()
+        identifier = data.get('identifier')
+        password = data.get('password')
         
-    if not all([identifier, password]):
-        return jsonify({"error": "all fields are required"}), 401
+        if not all([identifier, password]):
+            return jsonify({"error": "Missing required fields"}), 400
+            
+        farmer = Farmer.query.filter(
+            (Farmer.email == identifier) | 
+            (Farmer.phone_number == identifier)
+        ).first()
         
-    farmer = Farmer.query.filter((Farmer.email == identifier) | (Farmer.phone_number == identifier)).first()
-    if farmer and farmer.check_password(password):
-        session['id'] = farmer.id
-        session['user_type'] = 'farmer'
+        if not farmer or not farmer.check_password(password):
+            return jsonify({"error": "Invalid credentials"}), 401
         
+        # Generate JWT token
         expires = timedelta(hours=2)
-        access_token = create_access_token(identity=farmer.id, expires_delta=expires)
+        access_token = create_access_token(
+            identity=farmer.id,
+            expires_delta=expires
+        )
         
+        # Create response
         response = jsonify({
             "success": True,
             "message": "Login successful",
-            "token": access_token
+            "token": access_token,
+            "user": {
+                "id": farmer.id,
+                "name": farmer.full_name,
+                "email": farmer.email
+            }
         })
+        
+        # Set secure cookie
         response.set_cookie(
             "session_token",
             access_token,
             httponly=True,
-            secure=False,  # Set to True in production
-            samesite='Lax'
+            secure=False, #change to True in prod
+            samesite='Lax',
+            max_age=7200
         )
-            
-        return response
-    return jsonify({"error": "Invalid credentials"}), 401
+        
+        return response, 200
+        
+    except SQLAlchemyError as e:
+        logging.error(f"Database error: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "Database error occurred"}), 500
+    except Exception as e:
+        logging.error(f"Server error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 @authentication.route('/api/v1/login/buyer', methods=['POST'])
 def login_buyer():

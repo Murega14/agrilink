@@ -8,9 +8,16 @@ from flask_mail import Message
 from ..extensions import mail
 import re
 from sqlalchemy.exc import SQLAlchemyError
+import logging
 
 
 authentication = Blueprint('authentication', __name__)
+
+logging.basicConfig(
+    level=logging.ERROR,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 def generate_reset_token(email):
     serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])

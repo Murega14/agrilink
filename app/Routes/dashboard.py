@@ -21,7 +21,7 @@ def get_stats():
             .join(Product)\
             .filter(
                 Product.farmer_id == current_user_id,
-                Order.created_at >= start_of_month
+                Order.order_date >= start_of_month
             ).scalar() or 0
             
         # Current month revenue
@@ -29,7 +29,7 @@ def get_stats():
             .join(Product)\
             .filter(
                 Product.farmer_id == current_user_id,
-                Order.created_at >= start_of_month
+                Order.order_date >= start_of_month
             ).scalar() or 0
             
         # Pending orders
@@ -66,13 +66,13 @@ def get_recent_orders():
         recent_orders = db.session.query(Order)\
             .join(Product)\
             .filter(Product.farmer_id == current_user_id)\
-            .order_by(Order.created_at.desc())\
+            .order_by(Order.order_date.desc())\
             .limit(5)\
             .all()
             
         orders_data = [{
             "order_id": order.id,
-            "order_date": order.created_at.isoformat(),
+            "order_date": order.order_date.isoformat(),
             "total_amount": float(order.total_amount),
             "status": order.status
         } for order in recent_orders]

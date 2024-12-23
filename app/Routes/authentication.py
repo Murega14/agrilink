@@ -91,27 +91,27 @@ def login_farmer():
         
     farmer = Farmer.query.filter((Farmer.email == identifier) | (Farmer.phone_number == identifier)).first()
     if farmer and farmer.check_password(password):
+        session['id'] = farmer.id
+        session['user_type'] = 'farmer'
+        
         expires = timedelta(hours=2)
         access_token = create_access_token(identity=farmer.id, expires_delta=expires)
-        response = make_response(jsonify({
-            "login": "sucess"
-        })), 201
+        
         response = jsonify({
             "success": True,
             "message": "Login successful",
             "token": access_token
-            })
+        })
         response.set_cookie(
             "session_token",
             access_token,
             httponly=True,
-            secure=False
+            secure=False,  # Set to True in production
+            samesite='Lax'
         )
             
         return response
-    else:
-        return jsonify({"error": "we don't know you"}), 401
-        
+    return jsonify({"error": "Invalid credentials"}), 401
 
 @authentication.route('/api/v1/login/buyer', methods=['POST'])
 def login_buyer():
@@ -124,8 +124,12 @@ def login_buyer():
         
     buyer = Buyer.query.filter((Buyer.phone_number == identifier) | (Buyer.email == identifier)).first()
     if buyer and buyer.check_password(password):
+        session['id'] = buyer.id
+        session['user_type'] = 'buyer'
+        
         expires = timedelta(hours=2)
         access_token = create_access_token(identity=buyer.id, expires_delta=expires)
+        
         response = jsonify({
             "success": True,
             "message": "Login successful",
@@ -135,13 +139,12 @@ def login_buyer():
             "session_token",
             access_token,
             httponly=True,
-            secure=False  #remember to set to True in production
+            secure=False,  # Set to True in production
+            samesite='Lax'
         )
             
         return response
-            
-    else:
-        return jsonify({"error": "we don't know you"}), 401
+    return jsonify({"error": "Invalid credentials"}), 401
 
 @authentication.route('/api/v1/forgot_password', methods=['GET', 'POST'])
 def forgot_password():

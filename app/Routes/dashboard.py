@@ -1,118 +1,108 @@
-from flask import Blueprint, session, jsonify, request
-from ..models import Farmer, Order, Product, db
+from flask import Blueprint, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime, timedelta
-from ..wrappers import login_is_required
 from sqlalchemy import func
+from ..models import db, Farmer, Order, Product
 
 dashboard = Blueprint('dashboard', __name__)
 
-@dashboard.route('/api/dashboard/stats', methods=['GET'])
-@login_is_required
-def view_dashboard():
-    user_id = session.get('id')
-    if not user_id:
-        return jsonify({"error": "Not authenticated"}), 401
+@dashboard.route('/api/dashboard/stats')
+@jwt_required()
+def get_stats():
+    current_user_id = get_jwt_identity()
     
+    # Get current month dates
     today = datetime.now()
-    last_month = today - timedelta(days=30)
-    two_months_ago = today - timedelta(days=60)
+    start_of_month = datetime(today.year, today.month, 1)
     
-    # Current month stats
-    current_month_revenue = db.session.query(func.sum(Order.total_amount)).filter(
-        Order.farmer_id == user_id,
-        Order.order_date >= last_month,
-        Order.status == 'delivered'
-    ).scalar() or 0
-    
-    # Last month stats for comparison
-    last_month_revenue = db.session.query(func.sum(Order.total_amount)).filter(
-        Order.farmer_id == user_id,
-        Order.order_date.between(two_months_ago, last_month),
-        Order.status == 'delivered'
-    ).scalar() or 0
-    
-    # Calculate month-over-month change
-    revenue_change = 0
-    if last_month_revenue > 0:
-        revenue_change = ((current_month_revenue - last_month_revenue) / last_month_revenue) * 100
-    
-    # Products sold in current month
-    products_sold = Order.query.filter(
-        Order.farmer_id == user_id,
-        Order.order_date >= last_month,
-        Order.status == 'delivered'
-    ).count()
-    
-    # Products sold in previous month
-    last_month_products = Order.query.filter(
-        Order.farmer_id == user_id,
-        Order.order_date.between(two_months_ago, last_month),
-        Order.status == 'delivered'
-    ).count()
-    
-    # Calculate products change percentage
-    products_change = 0
-    if last_month_products > 0:
-        products_change = ((products_sold - last_month_products) / last_month_products) * 100
-    
-    stats = {
-        "products_sold": {
-            "value": products_sold,
-            "change": round(products_change, 1)
-        },
-        "current_month_value": {
-            "value": float(current_month_revenue),
-            "change": round(revenue_change, 1)
-        },
-        "pending_orders": {
-            "value": Order.query.filter_by(
-                farmer_id=user_id, 
-                status='pending'
+    try:
+        # Products sold this month
+        products_sold = db.session.query(func.sum(Order.quantity))\
+            .join(Product)\
+            .filter(
+                Product.farmer_id == current_user_id,
+                Order.created_at >= start_of_month
+            ).scalar() or 0
+            
+        # Current month revenue
+        current_month_revenue = db.session.query(func.sum(Order.total_amount))\
+            .join(Product)\
+            .filter(
+                Product.farmer_id == current_user_id,
+                Order.created_at >= start_of_month
+            ).scalar() or 0
+            
+        # Pending orders
+        pending_orders = Order.query\
+            .join(Product)\
+            .filter(
+                Product.farmer_id == current_user_id,
+                Order.status == 'pending'
             ).count()
-        },
-        "active_listings": {
-            "value": Product.query.filter_by(
-                farmer_id=user_id, 
-                status='available'
+            
+        # Active listings
+        active_listings = Product.query\
+            .filter(
+                Product.farmer_id == current_user_id,
+                Product.is_available == True
             ).count()
-        }
-    }
-    
-    return jsonify(stats)
+            
+        return jsonify({
+            "products_sold": products_sold,
+            "current_month_revenue": float(current_month_revenue),
+            "pending_orders": pending_orders,
+            "active_listings": active_listings
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-@dashboard.route('/api/dashboard/recent-orders', methods=['GET'])
-@login_is_required
+@dashboard.route('/api/dashboard/recent-orders')
+@jwt_required()
 def get_recent_orders():
-    user_id = session.get('id')
-    if not user_id:
-        return jsonify({"error": "Not authenticated"}), 401
+    current_user_id = get_jwt_identity()
     
-    recent_orders = Order.query.filter_by(farmer_id=user_id).order_by(
-        Order.order_date.desc()
-    ).limit(5).all()
-    
-    return jsonify([{
-        "order_id": order.id,
-        "order_date": order.created_at.isoformat(),
-        "total_amount": float(order.total_amount),
-        "status": order.status
-    } for order in recent_orders])
+    try:
+        recent_orders = db.session.query(Order)\
+            .join(Product)\
+            .filter(Product.farmer_id == current_user_id)\
+            .order_by(Order.created_at.desc())\
+            .limit(5)\
+            .all()
+            
+        orders_data = [{
+            "order_id": order.id,
+            "order_date": order.created_at.isoformat(),
+            "total_amount": float(order.total_amount),
+            "status": order.status
+        } for order in recent_orders]
+        
+        return jsonify(orders_data)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-@dashboard.route('/api/dashboard/available-products', methods=['GET'])
-@login_is_required
+@dashboard.route('/api/dashboard/available-products')
+@jwt_required()
 def get_available_products():
-    user_id = session.get('id')
-    if not user_id:
-        return jsonify({"error": "Not authenticated"}), 401
+    current_user_id = get_jwt_identity()
     
-    products = Product.query.filter_by(
-        farmer_id=user_id, 
-        status='available'
-    ).all()
-    
-    return jsonify([{
-        "product_id": product.id,
-        "name": product.name,
-        "price_per_unit": float(product.price_per_unit),
-        "amount_available": product.amount_available
-    } for product in products])
+    try:
+        products = Product.query\
+            .filter(
+                Product.farmer_id == current_user_id,
+                Product.is_available == True
+            )\
+            .all()
+            
+        products_data = [{
+            "id": product.id,
+            "name": product.name,
+            "amount_available": float(product.quantity),
+            "price_per_unit": float(product.price_per_unit)
+        } for product in products]
+        
+        return jsonify(products_data)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -36,8 +36,8 @@ def add_product():
     
     return jsonify({"message": "product added successfully"}), 200
 
-@products.route('/products', methods=['GET'])
-#@cache.cached()
+@products.route('/api/v1/products', methods=['GET'])
+@login_is_required
 def view_products():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 12, type=int)
@@ -67,7 +67,7 @@ def view_products():
     return jsonify(product_list)
 
 @products.route('/api/v1/products/category/<string:category>', methods=['GET'])
-#@login_is_required
+@login_is_required
 def view_by_category(category):
     products_by_category = Product.query.filter(func.lower(Product.category) == category.lower()).all()
     if not products_by_category:
@@ -85,7 +85,7 @@ def view_by_category(category):
     return jsonify(products)
 
 @products.route('/api/v1/products/<int:product_id>', methods=['GET'])
-#@login_is_required
+@login_is_required
 def view_by_id(product_id):
     product_by_id = Product.query.filter_by(id=product_id).first()
     if not product_by_id:
@@ -102,7 +102,7 @@ def view_by_id(product_id):
     return jsonify(product_details)
 
 @products.route('/api/v1/products/name/<string:name>', methods=['GET'])
-#@login_is_required
+@login_is_required
 def view_by_name(name):
     product_by_name = Product.query.filter(func.lower(Product.name) == name.lower()).all()
     if not product_by_name:

@@ -15,3 +15,7 @@ class Config:
     MAIL_USE_SSL = True
     MAIL_USE_TLS = False
     JWT_SECRET_KEY = os.getenv('SECRET_KEY')
+    CACHE_TYPE='simple'
+    CACHE_DEFAULT_TIMEOUT=90
+    CACHE_KEY_PREFIX='myapp_'
+    

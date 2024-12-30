@@ -9,6 +9,8 @@ from ..extensions import mail
 import re
 from sqlalchemy.exc import SQLAlchemyError
 import logging
+from email_validator import validate_email, EmailNotValidError
+from itsdangerous import SignatureExpired, BadSignature
 
 
 authentication = Blueprint('authentication', __name__)
@@ -27,66 +29,102 @@ def verify_reset_token(token, expiration=5000):
     serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     try:
         email = serializer.loads(token, salt='password-reset-salt', max_age=expiration)
-    except Exception as e:
-        return None
+    except (SignatureExpired, BadSignature) as e:
+        logger.warning(f"Invalid reset token: {str(e)}")
     return email
+
+def validate_password(password):
+    if len(password) < 8:
+        return False
+    if not re.search(r"[a-z]", password):
+        return False
+    if not re.search(r"[A-Z]", password):
+        return False
+    if not re.search(r"\d", password):
+        return False
+    if not re.searcj("[0-9]", password):
+        return False
+    return True
 
 
 @authentication.route('/api/v1/signup/farmer', methods=['POST'])
 def signup_farmer():
-    data = request.get_json()
-    first_name = data.get('first_name')
-    last_name = data.get('last_name')
-    phone_number = data.get('phone_number')
-    email = data.get('email')
-    password = data.get('password')
+    try:
+        data = request.get_json()
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        phone_number = data.get('phone_number')
+        email = data.get('email')
+        password = data.get('password')
+            
+        if not all([first_name, last_name, phone_number, email, password]):
+            return jsonify({"error": "all fields are required"}), 400
+            
+        try:
+            validate_email(email)
+        except EmailNotValidError:
+            return jsonify({"error": "invalid email format"}), 400
         
-    if not all([first_name, last_name, phone_number, email, password]):
-        return jsonify({"error": "all fields are required"}), 400
-        
-    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-        return jsonify({"error": "email format is invalid"}), 400
-        
-    if not re.match(r"^\d{10}$", phone_number):
-        return jsonify({"error": "phone number must be 10 digits"}), 400
-        
-    if db.session.query(Farmer.id).filter((Farmer.email == email) | (Farmer.phone_number == phone_number)).first():
-        return jsonify({"error": "email or phone number exists"}), 400
-        
-    new_farmer = Farmer(first_name=first_name, last_name=last_name, phone_number=phone_number, email=email)
-    new_farmer.hash_password(password)
-    db.session.add(new_farmer)
-    db.session.commit()
-        
-    return jsonify({"success": "farmer account created sucessfully"}), 201
+        if not validate_password(password):
+            return jsonify({"error": "password must contain atleast 8 letters, 1 uppercase, 1 lowercase, 1 digit and 1 special character"}), 400
+            
+        if not re.match(r"^\d{10}$", phone_number):
+            return jsonify({"error": "phone number must be 10 digits"}), 400
+            
+        if db.session.query(Farmer.id).filter((Farmer.email == email) | (Farmer.phone_number == phone_number)).first():
+            return jsonify({"error": "email or phone number exists"}), 400
+            
+        new_farmer = Farmer(first_name=first_name, last_name=last_name, phone_number=phone_number, email=email)
+        new_farmer.hash_password(password)
+        db.session.add(new_farmer)
+        db.session.commit()
+            
+        return jsonify({"success": "farmer account created sucessfully"}), 201
+
+    except Exception as e:
+        logger.error(f"error creating farmer account: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "internal server error"}), 500
 
 @authentication.route('/api/v1/signup/buyer', methods=['POST'])
 def signup_buyer():
-    data = request.get_json()
-    first_name = data.get('first_name')
-    last_name = data.get('last_name')
-    email = data.get('email')
-    phone_number = data.get('phone_number')
-    password = data.get('password')
-         
-    if not all([first_name, last_name, phone_number, email, password]):
-        return jsonify({"error": "all fields are required"}), 400
+    try:
+        data = request.get_json()
+        first_name = data.get('first_name')
+        last_name = data.get('last_name')
+        email = data.get('email')
+        phone_number = data.get('phone_number')
+        password = data.get('password')
             
-    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-        return jsonify({"error": "invalid email format"}), 400
+        if not all([first_name, last_name, phone_number, email, password]):
+            return jsonify({"error": "all fields are required"}), 400
+                
+        try:
+            validate_email(email)
+        except EmailNotValidError:
+            return jsonify({"error": "invalid email format"}), 400
         
-    if not re.match(r"^\d{10}$", phone_number):
-        return jsonify({"error": "phone number must be 10 digits"}), 400
-        
-    if db.session.query(Buyer.id).filter((Buyer.email == email) | (Buyer.phone_number == phone_number)).first():
-        return jsonify({"error": "email or phone number exists"}), 400
-        
-    new_buyer = Buyer(first_name=first_name, last_name=last_name, phone_number=phone_number, email=email)
-    new_buyer.hash_password(password)
-    db.session.add(new_buyer)
-    db.session.commit()
-        
-    return jsonify({"success": "buyer account created sucessfully"}), 201
+        if not validate_password(password):
+            return jsonify({"error": "password must contain atleast 8 letters, 1 uppercase, 1 lowercase, 1 digit and 1 special character"}), 400
+            
+            
+        if not re.match(r"^\d{10}$", phone_number):
+            return jsonify({"error": "phone number must be 10 digits"}), 400
+            
+        if db.session.query(Buyer.id).filter((Buyer.email == email) | (Buyer.phone_number == phone_number)).first():
+            return jsonify({"error": "email or phone number exists"}), 400
+            
+        new_buyer = Buyer(first_name=first_name, last_name=last_name, phone_number=phone_number, email=email)
+        new_buyer.hash_password(password)
+        db.session.add(new_buyer)
+        db.session.commit()
+            
+        return jsonify({"success": "buyer account created sucessfully"}), 201
+
+    except Exception as e:
+        logger.error(f"error creating buyer account: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "internal server error"}), 500
 
 
 @authentication.route('/api/v1/login/farmer', methods=['POST'])

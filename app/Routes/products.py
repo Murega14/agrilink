@@ -1,40 +1,71 @@
-from flask import Blueprint, jsonify, request, session, render_template
+from flask import Blueprint, jsonify, request
 from ..models import db, Product, Farmer
 from ..wrappers import login_is_required
-from ..extensions import cache
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func
+from typing import Dict, Any
+import logging
+from decimal import Decimal
 
 products = Blueprint('products', __name__)
+logger = logging.getLogger(__name__)
 
 @products.route('/api/v1/products/add', methods=['POST'])
 #@login_is_required
-def add_product():
-    data = request.get_json()
-    user_id = session.get('id')
+@jwt_required()
+def add_product() -> Dict[str, Any]:
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "no data provided"}), 400
+        
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({"error": "unauthorized"}), 401
+        
+        user = Farmer.query.get(user_id)
+        if not user:
+            logger.error(f"Farmer with id {user_id} not found")
+            return jsonify({"error": "farmer not found"}), 404
+        
+        name = data.get('name', '').strip()
+        description = data.get('description', '').strip()
+        price_per_unit = data.get('price_per_unit', 0)
+        amount_available = data.get('amount_available', 0)
+        category = data.get('category', '').strip().lower()
+        
+        
+        if not all([name, description, price_per_unit, amount_available, category]):
+            return jsonify({"error": "all fields are required"}), 400
+        
+        try:
+            price_per_unit = Decimal(price_per_unit)
+            amount_available = int(amount_available)
+        except (ValueError, TypeError):
+            return jsonify({"error": "invalid price or amount"}), 400
+        
+        if price_per_unit <= 0 or amount_available <= 0:
+            return jsonify({"error": "price and amount must be greater than 0"}), 400
+        
+        new_product = Product(
+            name=name,
+            description=description,
+            price_per_unit=price_per_unit,
+            amount_available=amount_available,
+            category=category,
+            farmer_id=user_id
+        )
+        db.session.add(new_product)
+        db.session.commit()
+        
+        logger.info(f"product {name} added successfully")
+        return jsonify({"success": "product added successfully"}), 201
     
-    user = Farmer.query.filter_by(id=user_id).first()
-    if not user:
-        return jsonify({"error": "farmer not found, can't add a product"}),404
-    
-    name = data.get('name')
-    description = data.get('description')
-    price_per_unit = data.get('price')
-    amount_available = data.get('amount')
-    category = data.get('category')
-    
-    if not all([name, description, price_per_unit, amount_available, category]):
-        return jsonify({"error": "all fields are required"}), 400
-    
-    new_product = Product(name=name,
-                          description=description,
-                          price_per_unit=price_per_unit,
-                          amount_available=amount_available,
-                          category=category,
-                          farmer_id=user.id)
-    db.session.add(new_product)
-    db.session.commit()
-    
-    return jsonify({"message": "product added successfully"}), 200
+    except Exception as e:
+        logger.error(f"error adding product: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "internal server error"}), 500
+            
 
 @products.route('/api/v1/products', methods=['GET'])
 #@login_is_required

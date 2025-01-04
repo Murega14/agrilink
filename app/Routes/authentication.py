@@ -6,6 +6,7 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from itsdangerous import URLSafeTimedSerializer
 from flask_mail import Message
 from ..extensions import mail
+from ..wrappers import login_is_required
 import re
 from sqlalchemy.exc import SQLAlchemyError
 import logging
@@ -220,46 +221,97 @@ def login_buyer():
         return response
     return jsonify({"error": "Invalid credentials"}), 401
 
-@authentication.route('/api/v1/forgot_password', methods=['GET', 'POST'])
+@authentication.route('/api/v1/logout', methods=['POST'])
+@login_is_required
+def logout():
+    session.clear()
+    response = make_response(jsonify({"message": "Logged out"}), 200)
+    response.set_cookie('session_token', '', expires=0)
+    return response
+
+@authentication.route('/api/v1/change_password', methods=['POST'])
+@login_is_required
+@jwt_required()
+def change_password():
+    user_id = get_jwt_identity()
+    
+    user = Farmer.query.get(user_id) or Buyer.query.get(user_id)
+    if not user:
+        return jsonify({"error": "unauthorized"}), 401
+    
+    data = request.get_json()
+    old_password = data.get('old_password')
+    new_password = data.get('new_password')
+    
+    if not all([old_password, new_password]):
+        return jsonify({"error": "all fields are required"}), 400
+    
+    if not user.check_password(old_password):
+        return jsonify({"error": "incorrect password"}), 400
+    
+    if not validate_password(new_password):
+        return jsonify({"error": "password must contain atleast 8 letters, 1 uppercase, 1 lowercase, 1 digit and 1 special character"}), 400
+    
+    user.hash_password(new_password)
+    db.session.commit()
+    
+    
+    
+
+@authentication.route('/api/v1/forgot_password', methods=['POST'])
 def forgot_password():
-    if request.method == 'POST':
-        email = request.form.get('email')
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip()
+        
+        if not email:
+            return jsonify({"error": "email is required"}), 400
+        
+        try:
+            validate_email(email)
+        except EmailNotValidError:
+            return jsonify({"error": "invalid email format"}), 400
         
         user = Farmer.query.filter_by(email=email).first() or Buyer.query.filter_by(email=email).first()
         
         if user:
-            token = generate_reset_token(user.email)
+            token = generate_reset_token(email)
             reset_url = url_for('authentication.reset_password', token=token, _external=True)
             
-            msg = Message("Password Reset Request", sender="tedmurega@gmail.com", recipients=[email])
-            msg.body = f"To reset your password, click the following link: {reset_url}"
-            mail.send(msg)
+            try:
+                msg = Message("Password Reset Request", sender=current_app.config['MAIL_USERNAME'], recipients=[email])
+                msg.body = f"Click the link below to reset your password\n{reset_url}"
+                mail.send(msg)
+                logger.info(f"Password reset link sent")
+                
+                return jsonify({"success": "password reset link sent"}), 200
+            except Exception as e:
+                logger.error(f"Email send error: {str(e)}")
+                return jsonify({"error": "email send error"}), 500
             
-            flash("A password reset link has been sent to your email", 'info')
-            return jsonify({"message": "A password reset link has been sent to your email"}), 200
-        else:
-            flash('Email not found.', 'warning')
-            return jsonify({"error": "Email not found"}), 404
+        return jsonify({"message": "if the email exists, a password reset link will be sent"}), 200
+    
+    except Exception as e:
+        logger.error(f"error sending password reset link: {str(e)}")
+        return jsonify({"error": "internal server error"}), 500
 
-    return render_template('forgot_password.html')
 
-           
-
-@authentication.route('/api/v1/reset_password/<token>', methods=['GET', 'POST'])
+@authentication.route('/api/v1/reset_password/<token>', methods=['POST'])
 def reset_password(token):
     email = verify_reset_token(token)
     if not email:
-        flash('The reset link is invalid or has expired.', 'danger')
-        return redirect(url_for('forgot_password'))
+        return jsonify({"error": "invalid or expires token"}), 400
     
-    if request.method == 'POST':
-        password = request.form.get('password')
-        user = Farmer.query.filter_by(email=email).first() or Buyer.query.filter_by(email=email).first()
-        if user:
-            user.hash_password(password)
-            db.session.commit()
-            flash('Your password has been reset successfully.', 'success')
-            return redirect(url_for('index'))
-        
-    return render_template('reset_password.html')
-
+    data = request.get_json()
+    password = data.get('password')
+    
+    if not validate_password(password):
+        return jsonify({"error": "password must contain atleast 8 letters, 1 uppercase, 1 lowercase, 1 digit and 1 special character"}), 400
+    
+    user = Farmer.query.filter_by(email=email).first() or Buyer.query.filter_by(email=email).first()
+    
+    if user:
+        user.hash_password(password)
+        db.session.commit()
+        logger.info(f"password reset successful")
+        return jsonify({"success": "password reset successful"}), 200

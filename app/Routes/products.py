@@ -97,6 +97,76 @@ def view_products():
 
     return jsonify(product_list)
 
+@products.route('/api/v1/products/update/<int:product_id>', methods=['PUT'])
+@login_is_required
+@jwt_required()
+def update_product(product_id):
+    try:
+        user_id = get_jwt_identity()
+        if not user_id:
+            return jsonify({"error": "unauthorized"}), 401
+        
+        product = Product.query.get(product_id)
+        if not product:
+            return jsonify({"error": "product not found"}), 404
+        
+        if product.farmer_id != user_id:
+            return jsonify({"error": "unauthorized"}), 401
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "no data provided"}), 400
+        
+        if 'name' in data:
+            product.name = data['name'].strip()
+            
+        if 'category' in data:
+            product.category = data['category'].strip().lower()
+        
+        if 'price_per_unit' in data:
+            try:
+                new_price = Decimal(data['price_per_unit'])
+                if new_price <= 0:
+                    return jsonify({"error": "price must be greater than 0"}), 400
+                product.price_per_unit = new_price
+            except (ValueError, TypeError):
+                return jsonify({"error": "Invalid price"}), 400
+            
+        if 'description' in data:
+            product.description = data['description'].strip()
+            
+        if 'amount_available' in data:
+            try:
+                new_amount = int(data['amount_available'])
+                if new_amount < 0:
+                    return jsonify({"error": "Amount cannot be less than 0"}), 400
+                product.amount_available = new_amount
+            except (ValueError, TypeError):
+                return jsonify({"error": "Invalid amount"}), 400
+            
+        db.session.commit()
+        logger.info(f"product {product.name} id{product.id} has been updated")
+        
+        return jsonify({
+            "message": "product updated successfully",
+            "product": {
+                "id": product.id,
+                "name": product.name,
+                "description": product.description,
+                "amount_available": product.amount_available,
+                "price_per_unit": str(product.price_per_unit),
+                "amount_available": product.amount_available,
+                "category": product.category
+                }
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"error updating product: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "internal server error"}), 500
+    
+    
+
 @products.route('/api/v1/products/category/<string:category>', methods=['GET'])
 @login_is_required
 def view_by_category(category):

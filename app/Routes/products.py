@@ -56,6 +56,7 @@ def add_product() -> Dict[str, Any]:
             farmer_id=user_id
         )
         db.session.add(new_product)
+        db.session.flush()
         db.session.commit()
         
         logger.info(f"product {name} added successfully")

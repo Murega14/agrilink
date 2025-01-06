@@ -222,10 +222,10 @@ def view_by_name(name):
         
     return jsonify(product_list)
 
-@products.route('/api/v1/products/<string:username>', methods=['GET'])
+@products.route('/api/v1/products', methods=['GET'])
 @login_is_required
 @jwt_required()
-def user_products(username):
+def user_products():
     try:
         user_id = get_jwt_identity()
         user = Farmer.query.get(user_id)
@@ -233,7 +233,6 @@ def user_products(username):
         if not user:
             return jsonify({"error": "user not found"}), 404
         
-        username = user.fullname
         products = Product.query.filter_by(id=user_id).all()
         
         if not products:

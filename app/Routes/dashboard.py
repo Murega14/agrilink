@@ -93,6 +93,7 @@ def get_available_products():
         ).all()
         
         products_data = [{
+            'id': product.id,
             'name': product.name,
             'amount_available': float(product.amount_available),
             'price_per_unit': float(product.price_per_unit)

@@ -221,3 +221,39 @@ def view_by_name(name):
      
         
     return jsonify(product_list)
+
+@products.route('/api/v1/products/<string:username>', methods=['GET'])
+@login_is_required
+@jwt_required()
+def user_products(username):
+    try:
+        user_id = get_jwt_identity()
+        user = Farmer.query.get(user_id)
+        
+        if not user:
+            return jsonify({"error": "user not found"}), 404
+        
+        username = user.fullname
+        products = Product.query.filter_by(id=user_id).all()
+        
+        if not products:
+            return jsonify({"error": "no products found"}), 404
+        
+        product_list = [{
+            "name": product.name,
+            "description": product.description,
+            "price": product.price_per_unit,
+            "amount": product.amount_available,
+            "category": product.category
+        } for product in products]
+        
+        return jsonify(product_list)
+    
+    except Exception as e:
+        logger.error(f"error fetching user products: {str(e)}")
+        return jsonify({"error": "internal server error"}), 500
+    
+@products.route('/api/v1/products/delete/<int:product_id>', methods=['DELETE'])
+@login_is_required
+@jwt_required()
+def

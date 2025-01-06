@@ -105,7 +105,7 @@ def update_product(id):
     try:
         user_id = get_jwt_identity()
         if not user_id:
-            return jsonify({"error": "unauthorized"}), 401
+            return jsonify({"error": "user not found"}), 401
         
         product = Product.query.get(id)
         if not product:

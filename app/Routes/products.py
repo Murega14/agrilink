@@ -253,7 +253,6 @@ def user_products(username):
         logger.error(f"error fetching user products: {str(e)}")
         return jsonify({"error": "internal server error"}), 500
     
-@products.route('/api/v1/products/delete/<int:product_id>', methods=['DELETE'])
-@login_is_required
-@jwt_required()
-def
+#@products.route('/api/v1/products/delete/<int:product_id>', methods=['DELETE'])
+#@login_is_required
+#@jwt_required()

@@ -98,16 +98,16 @@ def view_products():
 
     return jsonify(product_list)
 
-@products.route('/api/v1/products/update/<int:product_id>', methods=['PUT'])
+@products.route('/api/v1/products/update/<int:id>', methods=['PUT'])
 @login_is_required
 @jwt_required()
-def update_product(product_id):
+def update_product(id):
     try:
         user_id = get_jwt_identity()
         if not user_id:
             return jsonify({"error": "unauthorized"}), 401
         
-        product = Product.query.get(product_id)
+        product = Product.query.get(id)
         if not product:
             return jsonify({"error": "product not found"}), 404
         

@@ -95,6 +95,7 @@ def get_available_products():
         products_data = [{
             'id': product.id,
             'name': product.name,
+            'description': product.description,
             'amount_available': float(product.amount_available),
             'price_per_unit': float(product.price_per_unit),
             'category': product.category

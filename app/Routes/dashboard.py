@@ -96,7 +96,8 @@ def get_available_products():
             'id': product.id,
             'name': product.name,
             'amount_available': float(product.amount_available),
-            'price_per_unit': float(product.price_per_unit)
+            'price_per_unit': float(product.price_per_unit),
+            'category': product.category
         } for product in products]
         
         return jsonify(products_data), 200

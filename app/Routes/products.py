@@ -11,7 +11,7 @@ products = Blueprint('products', __name__)
 logger = logging.getLogger(__name__)
 
 @products.route('/api/v1/products/add', methods=['POST'])
-#@login_is_required
+@login_is_required
 @jwt_required()
 def add_product() -> Dict[str, Any]:
     try:
@@ -222,7 +222,7 @@ def view_by_name(name):
         
     return jsonify(product_list)
 
-@products.route('/api/v1/products', methods=['GET'])
+@products.route('/api/v1/products/user', methods=['GET'])
 @login_is_required
 @jwt_required()
 def user_products():

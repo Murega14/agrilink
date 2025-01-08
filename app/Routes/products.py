@@ -20,8 +20,6 @@ def add_product() -> Dict[str, Any]:
             return jsonify({"error": "no data provided"}), 400
         
         user_id = get_jwt_identity()
-        if not user_id:
-            return jsonify({"error": "unauthorized"}), 401
         
         user = Farmer.query.get(user_id)
         if not user:
@@ -56,6 +54,7 @@ def add_product() -> Dict[str, Any]:
             farmer_id=user_id
         )
         db.session.add(new_product)
+        db.session.flush()
         db.session.commit()
         
         logger.info(f"product {name} added successfully")
@@ -97,16 +96,16 @@ def view_products():
 
     return jsonify(product_list)
 
-@products.route('/api/v1/products/update/<int:product_id>', methods=['PUT'])
-@login_is_required
+@products.route('/api/v1/products/update/<int:id>', methods=['PUT'])
+#@login_is_required
 @jwt_required()
-def update_product(product_id):
+def update_product(id):
     try:
         user_id = get_jwt_identity()
         if not user_id:
-            return jsonify({"error": "unauthorized"}), 401
+            return jsonify({"error": "user not found"}), 401
         
-        product = Product.query.get(product_id)
+        product = Product.query.get(id)
         if not product:
             return jsonify({"error": "product not found"}), 404
         
@@ -220,3 +219,8 @@ def view_by_name(name):
      
         
     return jsonify(product_list)
+
+    
+#@products.route('/api/v1/products/delete/<int:product_id>', methods=['DELETE'])
+#@login_is_required
+#@jwt_required()

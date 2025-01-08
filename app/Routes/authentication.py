@@ -1,8 +1,26 @@
-from flask import Blueprint, session, abort, request, flash, jsonify, render_template, make_response, current_app, url_for, redirect
+from flask import (
+    Blueprint,
+    session,
+    abort,
+    request,
+    flash,
+    jsonify,
+    render_template,
+    make_response,
+    current_app,
+    url_for,
+    redirect
+)
 from functools import wraps
 from ..models import db, Farmer, Buyer
 from datetime import timedelta
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    get_jwt_identity,
+    jwt_required,
+    verify_jwt_in_request
+)
 from itsdangerous import URLSafeTimedSerializer
 from flask_mail import Message
 from ..extensions import mail
@@ -11,7 +29,8 @@ import re
 from sqlalchemy.exc import SQLAlchemyError
 import logging
 from email_validator import validate_email, EmailNotValidError
-from itsdangerous import SignatureExpired, BadSignature
+from itsdangerous import SignatureExpired
+from flask.views import MethodView
 
 
 authentication = Blueprint('authentication', __name__)
@@ -26,15 +45,28 @@ def generate_reset_token(email):
     serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     return serializer.dumps(email, salt='password-reset-salt')
 
-def verify_reset_token(token, expiration=5000):
+def verify_reset_token(token, expiration=3600):  # Reduced to 1 hour
     serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     try:
-        email = serializer.loads(token, salt='password-reset-salt', max_age=expiration)
+        email = serializer.loads(
+            token, 
+            salt='password-reset-salt',
+            max_age=expiration
+        )
+        return email
     except (SignatureExpired, BadSignature) as e:
         logger.warning(f"Invalid reset token: {str(e)}")
-    return email
+        return None
 
 def validate_password(password):
+    """
+    Validate password meets security requirements:
+    - At least 8 characters
+    - Contains uppercase letter
+    - Contains lowercase letter
+    - Contains number
+    - Contains special character
+    """
     if len(password) < 8:
         return False
     if not re.search(r"[a-z]", password):
@@ -43,7 +75,7 @@ def validate_password(password):
         return False
     if not re.search(r"\d", password):
         return False
-    if not re.searcj("[0-9]", password):
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
         return False
     return True
 
@@ -155,17 +187,14 @@ def login_farmer():
             identity=farmer.id,
             expires_delta=expires
         )
+        refresh_token = create_refresh_token(farmer.id)
         
         # Create response
         response = jsonify({
             "success": True,
             "message": "Login successful",
             "token": access_token,
-            "user": {
-                "id": farmer.id,
-                "name": farmer.full_name,
-                "email": farmer.email
-            }
+            "refresh_token": refresh_token,
         })
         
         # Set secure cookie
@@ -229,34 +258,101 @@ def logout():
     response.set_cookie('session_token', '', expires=0)
     return response
 
+@authentication.route('/api/v1/refresh_token', methods=['POST'])
+def refresh_token():
+    try:
+        data = request.get_json()
+        if not data or 'refreshToken' not in data:
+            return jsonify({"error": "Refresh token is required"}), 400
+
+        try:
+            verify_jwt_in_request(refresh=True)
+        except Exception as e:
+            logger.error(f"Invalid refresh token: {str(e)}")
+            return jsonify({"error": "Invalid or expired refresh token"}), 401
+
+        current_user = get_jwt_identity()
+        
+        user = Farmer.query.get(current_user) or Buyer.query.get(current_user)
+        if not user:
+            return jsonify({"error": "User not found"}), 401
+
+        new_token = create_access_token(
+            identity=current_user,
+            fresh=False,
+            expires_delta=timedelta(minutes=30)
+        )
+        
+        new_refresh_token = create_refresh_token(
+            identity=current_user,
+            expires_delta=timedelta(days=7)
+        )
+
+        response = jsonify({
+            "token": new_token,
+            "refreshToken": new_refresh_token
+        })
+
+        response.set_cookie(
+            "session_token",
+            new_token,
+            httponly=True,
+            secure=True,
+            samesite='Strict',
+            max_age=1800
+        )
+
+        return response, 200
+
+    except Exception as e:
+        logger.error(f"Token refresh error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
 @authentication.route('/api/v1/change_password', methods=['POST'])
 @login_is_required
 @jwt_required()
 def change_password():
-    user_id = get_jwt_identity()
-    
-    user = Farmer.query.get(user_id) or Buyer.query.get(user_id)
-    if not user:
-        return jsonify({"error": "unauthorized"}), 401
-    
-    data = request.get_json()
-    old_password = data.get('old_password')
-    new_password = data.get('new_password')
-    
-    if not all([old_password, new_password]):
-        return jsonify({"error": "all fields are required"}), 400
-    
-    if not user.check_password(old_password):
-        return jsonify({"error": "incorrect password"}), 400
-    
-    if not validate_password(new_password):
-        return jsonify({"error": "password must contain atleast 8 letters, 1 uppercase, 1 lowercase, 1 digit and 1 special character"}), 400
-    
-    user.hash_password(new_password)
-    db.session.commit()
-    
-    
-    
+    try:
+        user_id = get_jwt_identity()
+        user = Farmer.query.get(user_id) or Buyer.query.get(user_id)
+        
+        if not user:
+            return jsonify({"error": "unauthorized"}), 401
+        
+        data = request.get_json()
+        old_password = data.get('old_password')
+        new_password = data.get('new_password')
+        
+        if not all([old_password, new_password]):
+            return jsonify({"error": "all fields are required"}), 400
+        
+        if not user.check_password(old_password):
+            return jsonify({"error": "incorrect password"}), 400
+        
+        if not validate_password(new_password):
+            return jsonify({
+                "error": "Password must contain at least 8 characters, "
+                        "1 uppercase letter, 1 lowercase letter, "
+                        "1 number, and 1 special character"
+            }), 400
+        
+        if old_password == new_password:
+            return jsonify({
+                "error": "New password must be different from old password"
+            }), 400
+        
+        user.hash_password(new_password)
+        db.session.commit()
+        
+        # Invalidate all existing sessions
+        response = jsonify({"success": "password changed successfully"})
+        response.set_cookie('session_token', '', expires=0)
+        return response, 200
+        
+    except Exception as e:
+        logger.error(f"Password change error: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "internal server error"}), 500    
 
 @authentication.route('/api/v1/forgot_password', methods=['POST'])
 def forgot_password():

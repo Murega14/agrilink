@@ -20,8 +20,6 @@ def add_product() -> Dict[str, Any]:
             return jsonify({"error": "no data provided"}), 400
         
         user_id = get_jwt_identity()
-        if not user_id:
-            return jsonify({"error": "unauthorized"}), 401
         
         user = Farmer.query.get(user_id)
         if not user:

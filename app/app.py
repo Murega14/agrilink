@@ -5,6 +5,7 @@ from flask_migrate import Migrate
 from .Routes.authentication import authentication
 from .Routes.products import products
 from .Routes.dashboard import dashboard
+from .Routes.user import user
 from .extensions import mail, cache
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
@@ -25,6 +26,7 @@ CORS(app, supports_credentials=True)
 app.register_blueprint(authentication, url_prefix='')
 app.register_blueprint(products, url_prefix='')
 app.register_blueprint(dashboard, url_prefix='')
+app.register_blueprint(user, url_prefix='')
 
 
 if __name__ == '__main__':

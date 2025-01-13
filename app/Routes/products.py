@@ -11,7 +11,6 @@ products = Blueprint('products', __name__)
 logger = logging.getLogger(__name__)
 
 @products.route('/api/v1/products/add', methods=['POST'])
-#@login_is_required
 @jwt_required()
 def add_product() -> Dict[str, Any]:
     try:
@@ -67,7 +66,6 @@ def add_product() -> Dict[str, Any]:
             
 
 @products.route('/api/v1/products', methods=['GET'])
-#@login_is_required
 def view_products():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 12, type=int)
@@ -97,7 +95,6 @@ def view_products():
     return jsonify(product_list)
 
 @products.route('/api/v1/products/update/<int:id>', methods=['PUT'])
-#@login_is_required
 @jwt_required()
 def update_product(id):
     try:
@@ -167,7 +164,7 @@ def update_product(id):
     
 
 @products.route('/api/v1/products/category/<string:category>', methods=['GET'])
-@login_is_required
+@jwt_required()
 def view_by_category(category):
     products_by_category = Product.query.filter(func.lower(Product.category) == category.lower()).all()
     if not products_by_category:
@@ -185,7 +182,7 @@ def view_by_category(category):
     return jsonify(products)
 
 @products.route('/api/v1/products/<int:product_id>', methods=['GET'])
-@login_is_required
+@jwt_required()
 def view_by_id(product_id):
     product_by_id = Product.query.filter_by(id=product_id).first()
     if not product_by_id:
@@ -202,7 +199,7 @@ def view_by_id(product_id):
     return jsonify(product_details)
 
 @products.route('/api/v1/products/name/<string:name>', methods=['GET'])
-@login_is_required
+@jwt_required()
 def view_by_name(name):
     product_by_name = Product.query.filter(func.lower(Product.name) == name.lower()).all()
     if not product_by_name:
@@ -221,6 +218,23 @@ def view_by_name(name):
     return jsonify(product_list)
 
     
-#@products.route('/api/v1/products/delete/<int:product_id>', methods=['DELETE'])
-#@login_is_required
-#@jwt_required()
+@products.route('/api/v1/products/delete/<int:id>', methods=['DELETE'])
+@jwt_required()
+def delete_product(id):
+    user_id = get_jwt_identity()
+    user = Farmer.query.get(user_id)
+    if not user:
+        return jsonify({"error": "user not found"}), 404
+    
+    product = Product.query.get(id)
+    if not product:
+        return jsonify({"error": "poduct not found"}), 404
+    
+    if product.farmer_id != user_id:
+        return jsonify({"error": "you do not own this product"}), 401
+    
+    db.session.delete(product)
+    db.session.commit()
+    
+    return jsonify({"success": f"product {product.id} {product.name} has been deleted"})
+    

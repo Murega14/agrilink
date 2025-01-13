@@ -6,6 +6,7 @@ from .Routes.authentication import authentication
 from .Routes.products import products
 from .Routes.dashboard import dashboard
 from .Routes.user import user
+from .Routes.orders import orders
 from .extensions import mail, cache
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
@@ -27,6 +28,7 @@ app.register_blueprint(authentication, url_prefix='')
 app.register_blueprint(products, url_prefix='')
 app.register_blueprint(dashboard, url_prefix='')
 app.register_blueprint(user, url_prefix='')
+app.register_blueprint(orders, url_prefix='')
 
 
 if __name__ == '__main__':

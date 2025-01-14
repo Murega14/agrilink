@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func
 from datetime import datetime, timedelta
-from ..models import db, Order, Product, Farmer, OrderItem
+from ..models import db, Order, Product, FarmerOrder, OrderItem
 import logging
 
 dashboard = Blueprint('dashboard', __name__)
@@ -22,19 +22,19 @@ def get_dashboard_stats():
         
         # Get total products sold (sum of quantities from order items)
         products_sold = db.session.query(func.sum(OrderItem.quantity)).join(Order).filter(
-            Order.farmer_id == current_user_id,
-            Order.status == 'delivered'
+            FarmerOrder.farmer_id == current_user_id,
+            FarmerOrder.status == 'delivered'
         ).scalar() or 0
         
         # Get current month revenue
         current_month_revenue = db.session.query(func.sum(Order.total_amount)).filter(
-            Order.farmer_id == current_user_id,
-            Order.status == 'delivered',
-            Order.created_at >= start_of_month
+            FarmerOrder.farmer_id == current_user_id,
+            FarmerOrder.status == 'delivered',
+            FarmerOrder.created_at >= start_of_month
         ).scalar() or 0
         
         # Get pending orders count
-        pending_orders = Order.query.filter_by(
+        pending_orders = FarmerOrder.query.filter_by(
             farmer_id=current_user_id,
             status='pending'
         ).count()
@@ -62,7 +62,7 @@ def get_recent_orders():
     try:
         current_user_id = get_jwt_identity()
         
-        recent_orders = Order.query.filter_by(farmer_id=current_user_id)\
+        recent_orders = FarmerOrder.query.filter_by(farmer_id=current_user_id)\
             .order_by(Order.created_at.desc())\
             .limit(5)\
             .all()

@@ -1,6 +1,12 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from ..models import db, Buyer, Order, Product, FarmerOrder, OrderItem
+from ..models import (db,
+                      Buyer,
+                      Order,
+                      Product,
+                      FarmerOrder,
+                      OrderItem,
+                      Farmer)
 from decimal import Decimal
 
 orders = Blueprint('orders', __name__)
@@ -149,6 +155,50 @@ def get_order_details(order_id):
             order_details["items"].append(item_detail)
             
         return jsonify(order_details), 200
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@orders.route('/api/v1/farmer/orders', methods=['GET'])
+@jwt_required()
+def get_farmer_orders():
+    try:
+        user_id = get_jwt_identity()
+        farmer = Farmer.query.get(user_id)
+        
+        if not farmer:
+            return jsonify({"error": "user not found"}), 404
+        
+        farmer_orders = FarmerOrder.query.filter_by(farmer_id=user_id).all()
+        
+        if not farmer_orders:
+            return jsonify({"error": "No orders found"}), 200
+        
+        orders_list = []
+        for farmer_order in farmer_orders:
+            order = farmer_order.order
+            
+            items = []
+            for item in farmer_order.order_items:
+                items.append({
+                    "product_id": item.product_id,
+                    "product_name": item.product.name,
+                    "quantity": item.quantity,
+                    "price_per_unit": float(item.price_per_unit),
+                    "subtotal": float(item.calculate_item_total)
+                })
+                
+            order_detail = {
+                "order_id": order.id,
+                "order_date": order.created_at,
+                "buyer_name": order.buyer.full_name,
+                "status": farmer_order.status,
+                "subtotal": float(farmer_order.subtotal_amount),
+                "items": items
+            }
+            orders_list.append(order_detail)
+            
+        return jsonify({"orders": orders_list}), 200
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -29,7 +29,7 @@ import re
 from sqlalchemy.exc import SQLAlchemyError
 import logging
 from email_validator import validate_email, EmailNotValidError
-from itsdangerous import SignatureExpired
+from itsdangerous import SignatureExpired, BadSignature
 from flask.views import MethodView
 
 

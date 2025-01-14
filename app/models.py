@@ -1,23 +1,28 @@
-# models.py
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.dialects.postgresql import ENUM
-from datetime import datetime
-from enum import Enum
+from datetime import datetime, timezone
 
 db = SQLAlchemy()
 
 # Define enum types at the database level
 product_status_enum = ENUM('available', 'out_of_stock', 'deleted', name='product_status_enum', create_type=True)
-order_status_enum = ENUM('pending', 'delivered', 'cancelled', 'refunded', name='order_status_enum', create_type=True)
+
+# Define the enum type at module level
+order_status_enum = ENUM(
+    'pending', 
+    'delivered', 
+    'canceled', 
+    'refunded',
+    name='order_status_enum', create_type=False)
 
 class BaseModel(db.Model):
     __abstract__ = True
     
     id = db.Column(db.Integer, primary_key=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(datetime.timezone.utc), nullable=False)
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(datetime.timezone.utc), onupdate=lambda: datetime.now(datetime.timezone.utc), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=True)
 
 class UserMixin:
     first_name = db.Column(db.String(50), nullable=False)
@@ -40,7 +45,8 @@ class Farmer(BaseModel, UserMixin):
     __tablename__ = 'farmers'
     
     products = db.relationship('Product', back_populates='farmer', lazy='selectin', cascade='all, delete-orphan')
-    orders = db.relationship('Order', back_populates='farmer', lazy='selectin')
+    farmer_orders = db.relationship('FarmerOrder', back_populates='farmer', lazy='selectin')
+
 
 class Buyer(BaseModel, UserMixin):
     __tablename__ = 'buyers'
@@ -55,7 +61,11 @@ class Product(BaseModel):
     description = db.Column(db.Text, nullable=False)
     amount_available = db.Column(db.Integer, nullable=False)
     category = db.Column(db.String(50), nullable=False)
-    farmer_id = db.Column(db.Integer, db.ForeignKey('farmers.id', ondelete='CASCADE'), nullable=False)
+    farmer_id = db.Column(
+        db.Integer, 
+        db.ForeignKey('farmers.id', ondelete='CASCADE', name='fk_product_farmer_id'), 
+        nullable=False
+    )
     status = db.Column(product_status_enum, default='available', nullable=False)
     
     farmer = db.relationship('Farmer', back_populates='products')
@@ -70,16 +80,16 @@ class Order(BaseModel):
     status = db.Column(order_status_enum, default='pending', nullable=False)
     
     buyer = db.relationship('Buyer', back_populates='orders')
-    order_items =db.relationship('OrderItem', back_populates='order', lazy='selectin', cascade='all, delete-orphan')
+    order_items = db.relationship('OrderItem', back_populates='order', lazy='selectin', cascade='all, delete-orphan')
     tracking = db.relationship('OrderTracking', back_populates='order', lazy='selectin', cascade='all, delete-orphan')
-    farmer_orders = db.relationship('FarmerOrder', back_populates='order', lazy='selectin', cascade='all, delete-orphan')
+    farmers_orders = db.relationship('FarmerOrder', back_populates='order', lazy='selectin', cascade='all, delete-orphan')
     
     @property
     def calculate_total_amount(self):
         return sum(item.calculate_item_total for item in self.order_items)
 
 class FarmerOrder(BaseModel):
-    __tablename__ = 'farmers_orders'
+    __tablename__ = 'farmer_orders'
     
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
     farmer_id = db.Column(db.Integer, db.ForeignKey('farmers.id', ondelete='CASCADE'), nullable=False)
@@ -87,8 +97,8 @@ class FarmerOrder(BaseModel):
     status = db.Column(order_status_enum, default='pending', nullable=False)
     
     order = db.relationship('Order', back_populates='farmers_orders')
-    farmer = db.relationship('Farmer', back_populates='farmers_orders')
-    order_items = db.relationship('OrderItem', back_populates='farmers_orders', lazy='selectin')
+    farmer = db.relationship('Farmer', back_populates='farmer_orders')
+    order_items = db.relationship('OrderItem', back_populates='farmer_order', lazy='selectin')
     
     @property
     def calculate_subtotal(self):
@@ -98,7 +108,7 @@ class OrderItem(BaseModel):
     __tablename__ = 'order_items'
     
     order_id = db.Column(db.Integer, db.ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
-    farmer_order_id = db.Column(db.Integer, db.ForeignKey('farmers_orders.id', ondelete='CASCADE'), nullable=False)
+    farmer_order_id = db.Column(db.Integer, db.ForeignKey('farmer_orders.id', ondelete='CASCADE'), nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('products.id', ondelete='CASCADE'), nullable=False)
     quantity = db.Column(db.Integer, nullable=False)
     price_per_unit = db.Column(db.Numeric(10, 2), nullable=False)

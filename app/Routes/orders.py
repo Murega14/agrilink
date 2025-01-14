@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models import db, Buyer, Order, Product, FarmerOrder, OrderItem
+from decimal import Decimal
 
 orders = Blueprint('orders', __name__)
 
@@ -18,6 +19,7 @@ def get_orders():
     order_list = [{
         "id": order.id,
         "amount": order.total_amount,
+        "order_date": order.created_at,
         "delivery_date": order.delivery_date,
         "status": order.status
     } for order in orders]
@@ -29,16 +31,14 @@ def get_orders():
 def make_order():
     try:
         user_id = get_jwt_identity()
-        user = Buyer.query.get(user_id)
-        if not user:
-            return jsonify({"error": "User not found"}), 404
+        buyer = Buyer.query.get(user_id)
         
+        if not buyer:
+            return jsonify({'error': 'Buyer not found'}), 404
+            
         data = request.get_json()
-        if not data or 'items' not in data:
-            return jsonify({"error": "no items provided"}), 400
         
-        # creating a main order and will then add items to
-        # the order items table
+        
         new_order = Order(
             buyer_id=user_id,
             total_amount=0,
@@ -47,65 +47,108 @@ def make_order():
         db.session.add(new_order)
         db.session.flush()
         
-        # tracking orders for each farmer
-        farmer_orders = {}
-        total_amount = 0
+        if not new_order.id:
+            db.session.rollback()
+            return jsonify({'error': 'Failed to create order'}), 500
         
-        # processing each order item
-        for item in data['items']:
+        farmer_orders = {}
+        total_amount = Decimal('0')
+        
+        for item in data.get('items', []):
             product_id = item.get('product_id')
-            quantity = item.get('quantity')
-            
-            if not all([product_id, quantity]):
-                db.session.rollback()
-                return jsonify({"error": "invalid item data"}), 400
+            quantity = item.get('quantity', 0)
             
             product = Product.query.get(product_id)
-            if not product or product.status != 'available':
+            if not product:
                 db.session.rollback()
-                return jsonify({"error": f"product {product.id} not found"}), 400
-            
-            if product.amount_available < quantity:
+                return jsonify({'error': f'Product {product_id} not found'}), 404
+                
+            if quantity > product.amount_available:
                 db.session.rollback()
-                return jsonify({"error": f"insufficient quantity, only {product.amount_available} available"}), 400
+                return jsonify({'error': f'Insufficient quantity for product {product_id}'}), 400
             
-            #create a farmer order 
             if product.farmer_id not in farmer_orders:
                 farmer_order = FarmerOrder(
                     order_id=new_order.id,
                     farmer_id=product.farmer_id,
-                    subtotal_amount=0
+                    subtotal_amount=Decimal('0')
                 )
                 db.session.add(farmer_order)
                 db.session.flush()
-                farmer_orders[product.farmer_id] = farmer_order
                 
-            #create an order item
+                if not farmer_order.id:
+                    db.session.rollback()
+                    return jsonify({'error': 'Failed to create farmer order'}), 500
+                    
+                farmer_orders[product.farmer_id] = farmer_order
+            
             order_item = OrderItem(
                 order_id=new_order.id,
-                farmer_order_id=farmer_orders[product.farmer_id],
+                farmer_order_id=farmer_orders[product.farmer_id].id,
                 product_id=product.id,
                 quantity=quantity,
                 price_per_unit=product.price_per_unit
             )
             db.session.add(order_item)
             
-            product.amount -= quantity
-            
-            item_total = quantity * float(product.price_per_unit)
+            product.amount_available -= quantity
+            item_total = Decimal(str(quantity)) * product.price_per_unit
             total_amount += item_total
             farmer_orders[product.farmer_id].subtotal_amount += item_total
-            
+        
         new_order.total_amount = total_amount
         db.session.commit()
         
         return jsonify({
-            "message": "Order created successfully",
-            "order_id": new_order.id,
-            "total_amount": float(new_order.total_amount)
+            'message': 'Order created successfully',
+            'order_id': new_order.id
         }), 201
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({'error': str(e)}), 500
     
+@orders.route('/api/v1/orders/<int:order_id>', methods=['GET'])
+@jwt_required()
+def get_order_details(order_id):
+    try:
+        user_id = get_jwt_identity()
+        buyer = Buyer.query.get(user_id)
+        
+        if not buyer:
+            return jsonify({"error": "user not found"}), 404
+        
+        order = Order.query.get(order_id)
+        if not order:
+            return jsonify({"error": "order not found"}), 404
+        
+        if order.buyer_id != user_id:
+            return jsonify({"error": "unauthorized"}), 401
+        
+        order_details = {
+            "order_id": order.id,
+            "total_amount": float(order.total_amount),
+            "status": order.status,
+            "delivery_date": order.delivery_date,
+            "order_date": order.created_at,
+            "items": []
+        }
+        
+        for item in order.order_items:
+            product = item.product
+            sub_total = float(item.quantity * item.price_per_unit)
+            
+            item_detail = {
+                "product_id": product.id,
+                "product_name": product.name,
+                "quantity": item.quantity,
+                "price_per_unit": float(item.price_per_unit),
+                "subtotal": sub_total,
+                "farmer_name": product.farmer.full_name
+            }
+            order_details["items"].append(item_detail)
+            
+        return jsonify(order_details), 200
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

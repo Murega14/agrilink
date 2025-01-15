@@ -191,6 +191,7 @@ def get_farmer_orders():
             order_detail = {
                 "order_id": order.id,
                 "order_date": order.created_at,
+                "delivery_date": order.delivery_date,
                 "buyer_name": order.buyer.full_name,
                 "status": farmer_order.status,
                 "subtotal": float(farmer_order.subtotal_amount),

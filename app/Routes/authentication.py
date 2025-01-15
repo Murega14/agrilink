@@ -358,15 +358,19 @@ def change_password():
 def forgot_password():
     try:
         data = request.get_json()
-        email = data.get('email', '').strip()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        email = data.get('email', '').strip().lower()
         
         if not email:
-            return jsonify({"error": "email is required"}), 400
+            return jsonify({"error": "Email is required"}), 400
         
         try:
-            validate_email(email)
+            validation = validate_email(email)
+            email = validation.email  # Normalized email
         except EmailNotValidError:
-            return jsonify({"error": "invalid email format"}), 400
+            return jsonify({"error": "Invalid email format"}), 400
         
         user = Farmer.query.filter_by(email=email).first() or Buyer.query.filter_by(email=email).first()
         
@@ -375,39 +379,69 @@ def forgot_password():
             reset_url = url_for('authentication.reset_password', token=token, _external=True)
             
             try:
-                msg = Message("Password Reset Request", sender=current_app.config['MAIL_USERNAME'], recipients=[email])
-                msg.body = f"Click the link below to reset your password\n{reset_url}"
+                msg = Message(
+                    subject="Password Reset Request",
+                    sender=current_app.config['MAIL_USERNAME'],
+                    recipients=[email],
+                    body=f"""
+                    Hello,
+                    
+                    You have requested to reset your password. Please click the link below:
+                    
+                    {reset_url}
+                    
+                    If you did not request this, please ignore this email.
+                    
+                    This link will expire in 1 hour.
+                    
+                    Best regards,
+                    AgriLink Team
+                    """
+                )
                 mail.send(msg)
-                logger.info(f"Password reset link sent")
+                logger.info(f"Password reset link sent to {email}")
                 
-                return jsonify({"success": "password reset link sent"}), 200
             except Exception as e:
                 logger.error(f"Email send error: {str(e)}")
-                return jsonify({"error": "email send error"}), 500
-            
-        return jsonify({"message": "if the email exists, a password reset link will be sent"}), 200
+                return jsonify({"error": "Failed to send reset email"}), 500
+        
+        # Always return the same message whether user exists or not (security best practice)
+        return jsonify({"message": "If the email exists, a password reset link will be sent"}), 200
     
     except Exception as e:
-        logger.error(f"error sending password reset link: {str(e)}")
-        return jsonify({"error": "internal server error"}), 500
+        logger.error(f"Password reset error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 @authentication.route('/api/v1/reset_password/<token>', methods=['POST'])
 def reset_password(token):
-    email = verify_reset_token(token)
-    if not email:
-        return jsonify({"error": "invalid or expires token"}), 400
-    
-    data = request.get_json()
-    password = data.get('password')
-    
-    if not validate_password(password):
-        return jsonify({"error": "password must contain atleast 8 letters, 1 uppercase, 1 lowercase, 1 digit and 1 special character"}), 400
-    
-    user = Farmer.query.filter_by(email=email).first() or Buyer.query.filter_by(email=email).first()
-    
-    if user:
+    try:
+        email = verify_reset_token(token)
+        if not email:
+            return jsonify({"error": "invalid or expired token"}), 400
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "no data provided"}), 400
+            
+        password = data.get('password')
+        if not password:
+            return jsonify({"error": "password is required"}), 400
+        
+        if not validate_password(password):
+            return jsonify({"error": "password must contain atleast 8 letters, 1 uppercase, 1 lowercase, 1 digit and 1 special character"}), 400
+        
+        user = Farmer.query.filter_by(email=email).first() or Buyer.query.filter_by(email=email).first()
+        
+        if not user:
+            return jsonify({"error": "user not found"}), 404
+            
         user.hash_password(password)
         db.session.commit()
-        logger.info(f"password reset successful")
+        logger.info(f"Password reset successful for user: {email}")
         return jsonify({"success": "password reset successful"}), 200
+        
+    except Exception as e:
+        logger.error(f"Password reset error: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "internal server error"}), 500

@@ -1,13 +1,14 @@
-from flask import Blueprint, jsonify, request
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask import Blueprint, jsonify
+from flask_jwt_extended import jwt_required
 from ..models import Buyer
+from ..extensions import get_current_user_id
 
 user = Blueprint('user', __name__)
 
 @user.route('/api/v1/userprofile', methods=['GET'])
 @jwt_required()
 def get_user():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     
     user = Buyer.query.get(user_id)
     if not user:

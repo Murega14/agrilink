@@ -1,5 +1,4 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models import (db,
                       Buyer,
                       Order,
@@ -8,13 +7,15 @@ from ..models import (db,
                       OrderItem,
                       Farmer)
 from decimal import Decimal
+from ..wrappers import buyer_required, farmer_required
+from ..extensions import get_current_user_id
 
 orders = Blueprint('orders', __name__)
 
 @orders.route('/api/v1/orders', methods=['GET'])
-@jwt_required()
+@buyer_required
 def get_orders():
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     user = Buyer.query.get(user_id)
     
     if not user:
@@ -33,10 +34,10 @@ def get_orders():
     return jsonify(order_list), 200
 
 @orders.route('/api/v1/orders/create', methods=['POST'])
-@jwt_required()
+@buyer_required
 def make_order():
     try:
-        user_id = get_jwt_identity()
+        user_id = get_current_user_id()
         buyer = Buyer.query.get(user_id)
         
         if not buyer:
@@ -115,10 +116,10 @@ def make_order():
         return jsonify({'error': str(e)}), 500
     
 @orders.route('/api/v1/orders/<int:order_id>', methods=['GET'])
-@jwt_required()
+@buyer_required
 def get_order_details(order_id):
     try:
-        user_id = get_jwt_identity()
+        user_id = get_current_user_id()
         buyer = Buyer.query.get(user_id)
         
         if not buyer:
@@ -160,10 +161,10 @@ def get_order_details(order_id):
         return jsonify({"error": str(e)}), 500
     
 @orders.route('/api/v1/farmer/orders', methods=['GET'])
-@jwt_required()
+@farmer_required
 def get_farmer_orders():
     try:
-        user_id = get_jwt_identity()
+        user_id = get_current_user_id()
         farmer = Farmer.query.get(user_id)
         
         if not farmer:

@@ -1,9 +1,10 @@
 from flask import Blueprint, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import func
-from datetime import datetime, timedelta
+from datetime import datetime
 from ..models import db, Order, Product, FarmerOrder, OrderItem
 import logging
+from..wrappers import farmer_required
+from ..extensions import get_current_user_id
 
 dashboard = Blueprint('dashboard', __name__)
 
@@ -11,10 +12,10 @@ logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
 @dashboard.route('/api/dashboard/stats', methods=['GET'])
-@jwt_required()
+@farmer_required
 def get_dashboard_stats():
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = get_current_user_id()
         
         # Calculate start of current month
         today = datetime.utcnow()
@@ -57,10 +58,10 @@ def get_dashboard_stats():
         return jsonify({"error": str(e)}), 500
 
 @dashboard.route('/api/dashboard/recent-orders', methods=['GET'])
-@jwt_required()
+@farmer_required
 def get_recent_orders():
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = get_current_user_id()
         
         recent_orders = FarmerOrder.query.filter_by(farmer_id=current_user_id)\
             .order_by(Order.created_at.desc())\
@@ -82,10 +83,10 @@ def get_recent_orders():
         return jsonify({"error": str(e)}), 500
 
 @dashboard.route('/api/dashboard/available-products', methods=['GET'])
-@jwt_required()
+@farmer_required
 def get_available_products():
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = get_current_user_id()
         
         products = Product.query.filter_by(
             farmer_id=current_user_id,

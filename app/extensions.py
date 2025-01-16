@@ -25,3 +25,9 @@ def get_current_user():
             return Buyer.query.get(user_id)
         
     return None
+
+def get_current_user_id():
+    identity = get_jwt_identity()
+    if isinstance(identity, dict):
+        return identity['id']
+    return None

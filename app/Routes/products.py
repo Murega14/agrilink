@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from ..models import db, Product, Farmer
-from ..wrappers import login_is_required
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from ..wrappers import farmer_required, buyer_required
+from ..extensions import get_current_user_id
 from sqlalchemy import func
 from typing import Dict, Any
 import logging
@@ -11,14 +11,14 @@ products = Blueprint('products', __name__)
 logger = logging.getLogger(__name__)
 
 @products.route('/api/v1/products/add', methods=['POST'])
-@jwt_required()
+@farmer_required
 def add_product() -> Dict[str, Any]:
     try:
         data = request.get_json()
         if not data:
             return jsonify({"error": "no data provided"}), 400
         
-        user_id = get_jwt_identity()
+        user_id = get_current_user_id()
         
         user = Farmer.query.get(user_id)
         if not user:
@@ -98,10 +98,10 @@ def view_products():
     return jsonify(product_list)
 
 @products.route('/api/v1/products/update/<int:id>', methods=['PUT'])
-@jwt_required()
+@farmer_required
 def update_product(id):
     try:
-        user_id = get_jwt_identity()
+        user_id = get_current_user_id()
         if not user_id:
             return jsonify({"error": "user not found"}), 401
         
@@ -167,7 +167,6 @@ def update_product(id):
     
 
 @products.route('/api/v1/products/category/<string:category>', methods=['GET'])
-@jwt_required()
 def view_by_category(category):
     products_by_category = Product.query.filter(Product.category.ilike(f'%{category}%')).all()
     if not products_by_category:
@@ -185,7 +184,6 @@ def view_by_category(category):
     return jsonify(products)
 
 @products.route('/api/v1/products/<int:product_id>', methods=['GET'])
-@jwt_required()
 def view_by_id(product_id):
     product_by_id = Product.query.filter_by(id=product_id).first()
     if not product_by_id:
@@ -202,7 +200,6 @@ def view_by_id(product_id):
     return jsonify(product_details), 200
 
 @products.route('/api/v1/products/name/<string:name>', methods=['GET'])
-@jwt_required()
 def view_by_name(name):
     product_by_name = Product.query.filter(func.lower(Product.name) == name.lower()).all()
     if not product_by_name:
@@ -222,9 +219,9 @@ def view_by_name(name):
 
     
 @products.route('/api/v1/products/delete/<int:id>', methods=['DELETE'])
-@jwt_required()
+@farmer_required
 def delete_product(id):
-    user_id = get_jwt_identity()
+    user_id = get_current_user_id()
     user = Farmer.query.get(user_id)
     if not user:
         return jsonify({"error": "user not found"}), 404

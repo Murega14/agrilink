@@ -107,7 +107,10 @@ def signup_farmer():
         if db.session.query(Farmer.id).filter((Farmer.email == email) | (Farmer.phone_number == phone_number)).first():
             return jsonify({"error": "email or phone number exists"}), 400
             
-        new_farmer = Farmer(first_name=first_name, last_name=last_name, phone_number=phone_number, email=email)
+        new_farmer = Farmer(first_name=first_name,
+                            last_name=last_name,
+                            phone_number=phone_number,
+                            email=email)
         new_farmer.hash_password(password)
         db.session.add(new_farmer)
         db.session.commit()
@@ -147,7 +150,10 @@ def signup_buyer():
         if db.session.query(Buyer.id).filter((Buyer.email == email) | (Buyer.phone_number == phone_number)).first():
             return jsonify({"error": "email or phone number exists"}), 400
             
-        new_buyer = Buyer(first_name=first_name, last_name=last_name, phone_number=phone_number, email=email)
+        new_buyer = Buyer(first_name=first_name,
+                          last_name=last_name,
+                          phone_number=phone_number,
+                          email=email)
         new_buyer.hash_password(password)
         db.session.add(new_buyer)
         db.session.commit()
@@ -181,23 +187,26 @@ def login_farmer():
         if not farmer or not farmer.check_password(password):
             return jsonify({"error": "Invalid credentials"}), 401
         
-        # Generate JWT token
+        identity = {
+            'id': farmer.id,
+            'role': 'farmer'
+        }
+        
         expires = timedelta(hours=2)
         access_token = create_access_token(
-            identity=farmer.id,
+            identity=identity,
             expires_delta=expires
         )
         refresh_token = create_refresh_token(farmer.id)
         
-        # Create response
         response = jsonify({
             "success": True,
             "message": "Login successful",
             "token": access_token,
             "refresh_token": refresh_token,
+            "role": "farmer"
         })
         
-        # Set secure cookie
         response.set_cookie(
             "session_token",
             access_token,
@@ -227,28 +236,40 @@ def login_buyer():
         return jsonify({"error": "all fields are required"}), 401
         
     buyer = Buyer.query.filter((Buyer.phone_number == identifier) | (Buyer.email == identifier)).first()
-    if buyer and buyer.check_password(password):
-        session['id'] = buyer.id
-        session['user_type'] = 'buyer'
-        
-        expires = timedelta(hours=2)
-        access_token = create_access_token(identity=buyer.id, expires_delta=expires)
-        
-        response = jsonify({
-            "success": True,
-            "message": "Login successful",
-            "token": access_token
-        })
-        response.set_cookie(
-            "session_token",
-            access_token,
-            httponly=True,
-            secure=False,  # Set to True in production
-            samesite='Lax'
-        )
-            
-        return response
-    return jsonify({"error": "Invalid credentials"}), 401
+    
+    if not buyer or not buyer.check_password(password):
+        return jsonify({"error": "invalid credentials"}), 401
+    
+    identity = {
+        'id': buyer.id,
+        'role': 'buyer'
+    }
+    
+    expires = timedelta(hours=2)
+    access_token = create_access_token(
+        identity=identity,
+        expires_delta=expires
+    )
+    refresh_token = create_refresh_token(identity)
+    
+    response = jsonify({
+        "success": True,
+        "message": "Login successful",
+        "token": access_token,
+        "refresh_token": refresh_token,
+        "role": "buyer"
+    })
+    
+    response.set_cookie(
+        "session_token",
+        access_token,
+        httponly=True,
+        secure=False,
+        samesite='Lax',
+        max_age=7200
+    )
+    
+    return response, 200
 
 @authentication.route('/api/v1/logout', methods=['POST'])
 @login_is_required
@@ -344,7 +365,6 @@ def change_password():
         user.hash_password(new_password)
         db.session.commit()
         
-        # Invalidate all existing sessions
         response = jsonify({"success": "password changed successfully"})
         response.set_cookie('session_token', '', expires=0)
         return response, 200
@@ -368,7 +388,7 @@ def forgot_password():
         
         try:
             validation = validate_email(email)
-            email = validation.email  # Normalized email
+            email = validation.email
         except EmailNotValidError:
             return jsonify({"error": "Invalid email format"}), 400
         

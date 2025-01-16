@@ -6,16 +6,20 @@ from datetime import datetime, timezone
 
 db = SQLAlchemy()
 
-# Define enum types at the database level
-product_status_enum = ENUM('available', 'out_of_stock', 'deleted', name='product_status_enum', create_type=True)
+product_status_enum = ENUM(
+    'available',
+    'out_of_stock',
+    'deleted',
+    name='product_status_enum',
+    create_type=True)
 
-# Define the enum type at module level
 order_status_enum = ENUM(
     'pending', 
     'delivered', 
     'canceled', 
     'refunded',
     name='order_status_enum', create_type=False)
+
 
 class BaseModel(db.Model):
     __abstract__ = True

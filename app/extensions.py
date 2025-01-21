@@ -11,7 +11,11 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 mail = Mail()
-cache = Cache()
+cache = Cache(config={
+    'CACHE_TYPE': 'RedisCache',
+    'CACHE_REDIS_URL': 'redis-12843.c73.us-east-1-2.ec2.redns.redis-cloud.com',
+    'CACHE_DEFAULT_TIMEOUT': 300
+})
 
 def get_current_user():
     identity = get_jwt_identity()

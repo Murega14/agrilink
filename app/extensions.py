@@ -4,6 +4,7 @@ import logging
 from flask_caching import Cache
 from flask_jwt_extended import get_jwt_identity
 from .models import Farmer, Buyer
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ load_dotenv()
 mail = Mail()
 cache = Cache(config={
     'CACHE_TYPE': 'RedisCache',
-    'CACHE_REDIS_URL': 'redis-12843.c73.us-east-1-2.ec2.redns.redis-cloud.com',
+    'CACHE_REDIS_URL': os.getenv('REDIS_URL'),
     'CACHE_DEFAULT_TIMEOUT': 300
 })
 

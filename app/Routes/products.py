@@ -250,3 +250,68 @@ def view_by_category(category: str):
         logger.error(f"error fetching products by category: {str(e)}")
         return jsonify({"error": "internal server error"}), 500
         
+@products.route('/api/v1/products/<int:id>', methods=['GET'])
+def view_by_id(id: int):
+    """
+    view a single product by its ID
+
+    Args:
+        id (int): unique identifier
+    """
+    try:
+        product = Product.query.get(id)
+        if not product:
+            logger.error(f"product not found: {id}")
+            return jsonify({"error": "product not found"}), 404
+        
+        product_details = {
+            "id": product.id,
+            "name": product.name,
+            "description": product.description,
+            "price": float(product.price_per_unit),
+            "amount_available": product.amount_available,
+            "category": product.category,
+            "seller": product.farmer.full_name
+        }
+        
+        return jsonify(product_details), 200
+    
+    except Exception as e:
+        logger.error(f"Failed to fetch product by id: {str(e)}")
+        return jsonify({"error": "internal server error"}), 500
+    
+@products.route('/api/v1/products/delete/<int:id>', methods=['DELETE'])
+@farmer_required
+def delete_product(id: int):
+    """
+    delete a product for the current farmer
+
+    Args:
+        id (int): product unique identifier
+    """
+    try:
+        user_id = get_current_user_id()
+        farmer = Farmer.query.get(user_id)
+        if not farmer:
+            logger.error(f"farmer not found: {user_id}")
+            return jsonify({"Error": "farmer not found"}), 400
+        
+        product = Product.query.get(id)
+        if not product:
+            logger.error(f"product not found: {id}")
+            return jsonify({"error": "product not found"}), 404
+        
+        if product.farmer_id != user_id:
+            logger.error(f"unauthorized access by: {user_id} for product: {id}")
+            return jsonify({"error": "unauthorized"}), 401
+        
+        db.session.delete(product)
+        db.session.commit()
+        
+        logger.info(f"product deleted successfully: {product.name} (ID: {product.id})")
+        return jsonify({"error": f"product {product.name} has been deleted"}), 200
+    
+    except Exception as e:
+        logger.error(f"error deleting product: {str(e)}")
+        db.session.rollback()
+        return jsonify({"error": "internal server error"}), 500

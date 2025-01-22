@@ -20,31 +20,71 @@ orders = Blueprint('orders', __name__)
 @buyer_required
 def get_orders():
     """
-    fetch all orders for the current buyer
+    Fetch all orders for the current buyer, including order items.
     """
     try:
         user_id = get_current_user_id()
         buyer = Buyer.query.get(user_id)
+        
         if not buyer:
             logger.error(f"Buyer not found: {user_id}")
             return jsonify({"error": "Buyer not found"}), 404
         
-        orders = Order.query.filter_by(buyer_id=user_id).all()
+        # Get pagination parameters from the request
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+
+        if page <= 0 or per_page <= 0:
+            logger.error(f"Invalid pagination parameters: page={page}, per_page={per_page}")
+            return jsonify({"error": "Page and per_page must be greater than 0"}), 400
         
-        order_list = [{
-            "id": order.id,
-            "amount": float(order.amount),
-            "order_date": order.created_at.isoformat(),
-            "delivery_date": order.delivery_date.isoformat() if order.delivery_date else None,
-            "status": order.status
-        } for order in orders]
+        # Fetch orders with pagination
+        orders_query = Order.query.filter_by(buyer_id=user_id)
+        pagination = orders_query.paginate(page=page, per_page=per_page)
+        orders = pagination.items
         
-        return jsonify(order_list), 200
+        # Build the response with order details and items
+        order_list = []
+        for order in orders:
+            order_details = {
+                "id": order.id,
+                "total_amount": float(order.total_amount),
+                "order_date": order.created_at.isoformat(),
+                "delivery_date": order.delivery_date.isoformat() if order.delivery_date else None,
+                "status": order.status,
+                "items": []
+            }
+            
+            # Add order items to the order details
+            for item in order.order_items:
+                product = item.product
+                item_details = {
+                    "product_id": product.id,
+                    "product_name": product.name,
+                    "quantity": item.quantity,
+                    "price_per_unit": float(item.price_per_unit),
+                    "subtotal": float(item.calculate_item_total),
+                    "farmer_name": product.farmer.full_name
+                }
+                order_details["items"].append(item_details)
+            
+            order_list.append(order_details)
+        
+        # Return paginated response
+        return jsonify({
+            "orders": order_list,
+            "page": pagination.page,
+            "per_page": pagination.per_page,
+            "total_pages": pagination.pages,
+            "total_items": pagination.total
+        }), 200
     
     except Exception as e:
-        logger.error(f"Error fetching orders: {str(e)}")
+        logger.error(f"Error fetching orders: {str(e)}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
-    
+
+
+
 @orders.route('/api/v1/orders/create', methods=['POST'])
 @buyer_required
 def make_order():

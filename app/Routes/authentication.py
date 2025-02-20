@@ -329,7 +329,7 @@ def refresh_token():
         logger.error(f"Token refresh error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
-@authentication.route('/api/v1/change_password', methods=['POST'])
+@authentication.route('/api/v1/change_password', methods=['PUT'])
 @login_is_required
 @jwt_required()
 def change_password():
@@ -362,7 +362,7 @@ def change_password():
                 "error": "New password must be different from old password"
             }), 400
         
-        user.hash_password(new_password)
+        user.password_hash = user.hash_password(new_password)
         db.session.commit()
         
         response = jsonify({"success": "password changed successfully"})

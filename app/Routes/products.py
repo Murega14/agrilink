@@ -3,7 +3,6 @@ from ..models import db, Product, Farmer
 from ..wrappers import farmer_required
 from ..extensions import validate_product_data, cache, logger
 from sqlalchemy.exc import SQLAlchemyError
-from decimal import Decimal
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 products = Blueprint('products', __name__)
@@ -35,7 +34,7 @@ def add_product():
                 description=validated_data["description"],
                 price_per_unit=validated_data["price_per_unit"],
                 amount_available=validated_data["amount_available"],
-                category=validated_data["category"]
+                category=validated_data["category"],
                 farmer_id=farmer_id
             )
             db.session.add(new_product)
@@ -122,93 +121,89 @@ def view_products():
         return jsonify({"error": "Internal server error"}), 500
     
 @products.route('/api/v1/products/update/<int:id>', methods=['PUT'])
+@jwt_required()
 @farmer_required
 def update_product(id: int):
     """
-    update an existing product for the current farmer
+    updates a product 
 
     Args:
-        id (integer): product identifier
+        id (int): product identifier
+
+    Returns:
+        JSON: success or error message
     """
     try:
-        user_id = get_current_user_id()
-        farmer = Farmer.query.get(user_id)
-        if not farmer:
-            logger.error("Farmer not found")
-            return jsonify({"error": "farmer not found"}), 404
+        farmer_id = get_jwt_identity()
         
-        product = Product.query.get(id)
-        if not product:
-            logger.error(f"product not found: {id}")
-            return jsonify({"error": "product not found"}), 404
-        
-        if product.farmer_id != user_id:
-            logger.error(f"unauthorized access to product: {id} by user: {user_id}")
-            return jsonify({"error": "unauthorized"}),401
+        product = Product.query.get_or_404(id)
+        if product.farmer_id != farmer_id:
+            return jsonify({"error": "unauthorized access"}), 401
         
         data = request.get_json()
-        if not data:
-            logger.error("No data provided in the request")
-            return jsonify({"error": "no data provided"}), 400
+        try:
+            if 'name' in data:
+                product.name = data['name'].strip()
+            if 'description' in data:
+                product.description = data['description'].strip()
+            if 'category' in data:
+                product.category = data['category'].strip()
+            if 'price_per_unit' in data:
+                try:
+                    new_price = float(data['price_per_unit'])
+                    if new_price <= 0:
+                        return jsonify({"error": "price cannot be zero or less than zero"}), 400
+                    product.price_per_unit = new_price
+                except (ValueError, TypeError):
+                    return jsonify({"error": "invalid price"}), 400
+            if 'amount_available' in data:
+                try:
+                    amount = int(data['amount_available'])
+                    if amount < 0:
+                        return jsonify({"error": "available amount cannot be less than zer0"}), 400
+                    if amount == 0:
+                        product.status = 'out of stock'
+                    product.amount_available = amount
+                except (ValueError, TypeError):
+                    return jsonify({"error": "invalid amount available"}), 400
+            
+            db.session.commit()
+            response = jsonify({
+                "success": True,
+                "message": "product updated successfully"
+            })
+            return response, 200
         
-        if 'name' in data:
-            product.name = data['name'].strip()
-        if 'description' in data:
-            product.description = data['description'].strip()
-        if 'category' in data:
-            product.category = data['category'].strip()
-        if 'price_per_unit' in data:
-            try:
-                new_price = Decimal(str(data['price_per_unit']))
-                if new_price <= 0:
-                    return jsonify({"error": "price must be greater than 0"}), 400
-                product.price_per_unit = new_price
-            except (ValueError, TypeError):
-                return jsonify({"error": "invalid price"}), 400
-        if 'amount_available' in data:
-            try:
-                new_amount = int(data['amount_available'])
-                if new_amount < 0:
-                    return jsonify({"error": "available amount cannot be less than 0"}), 400
-                product.amount_available = new_amount
-            except (ValueError, TypeError):
-                return jsonify({"error": "invalid amount"}), 400
-        
-        db.session.commit()
-        logger.info(f"product updated successfully: {product.name} (ID: {product.id})")
-        
-        return jsonify({
-            "message": "product updated successfully",
-            "product": {
-                "id": product.id,
-                "name": product.name,
-                "description": product.description,
-                "price": float(product.price_per_unit),
-                "amount_available": product.amount_available,
-                "category": product.category
-            }
-        }), 200
-        
+        except SQLAlchemyError as e:
+            logger.error(f"database error: {str(e)}")
+            db.session.rollback()
+            return jsonify({
+                "message": "failed to update product details",
+                "error": str(e)
+            }), 400
+            
     except Exception as e:
-        logger.error(f"error updating product: {str(e)}")
-        db.session.rollback()
-        return jsonify({"error": "internal server error"}), 500
+        logger.error(f"endpoint error: {str(e)}")
+        return jsonify({
+            "message": "internal server error",
+            "error": str(e)
+        }), 500
 
-
-
-@products.route('/api/v1/products/category/<string:category>', methods=['GET'])
+@products.route('/api/v1/products/category/<string:category>', methods=['GET'])    
 def view_by_category(category: str):
     """
     view products by category
 
     Args:
-        category (str): product category
+        category (str): name of category
+
+    Returns:
+        JSON: list of all the products in that category
     """
     try:
-        products = Product.query.filter(Product.category.ilike(f'%{category}%')).all()
+        products = Product.query.filter(Product.category.ilike(f"%{category}%")).all()
         if not products:
-            logger.error(f"no products found for category: {category}")
-            return jsonify({"error": "category not found"}), 404
+            return jsonify({"message": "no products for that category"}), 404
         
         product_list = [{
             "id": product.id,
@@ -216,77 +211,90 @@ def view_by_category(category: str):
             "description": product.description,
             "price": float(product.price_per_unit),
             "amount_available": product.amount_available,
-            "seller": product.farmer.full_name
+            "seller": product.farmer.full_name if product.farmer else None
         } for product in products]
         
-        return jsonify(product_list), 200
+        response = jsonify(product_list)
+        return response, 200
     
     except Exception as e:
-        logger.error(f"error fetching products by category: {str(e)}")
-        return jsonify({"error": "internal server error"}), 500
+        logger.error(f"endpoint error: {str(e)}")
+        return jsonify({
+            "message": "failed to fetch products, internal server error",
+            "error": str(e)
+        }), 500
         
-@products.route('/api/v1/products/<int:id>', methods=['GET'])
+@products.route('/api/v1/products/<int:id>', methods=['GET'])    
 def view_by_id(id: int):
     """
-    view a single product by its ID
+    view a single products details
 
     Args:
-        id (int): unique identifier
+        id (int): product identifier
+
+    Returns:
+        JSON: product details 
     """
     try:
-        product = Product.query.get(id)
-        if not product:
-            logger.error(f"product not found: {id}")
-            return jsonify({"error": "product not found"}), 404
+        product = Product.query.get_or_404(id)
         
-        product_details = {
+        response = jsonify({
             "id": product.id,
             "name": product.name,
             "description": product.description,
             "price": float(product.price_per_unit),
             "amount_available": product.amount_available,
             "category": product.category,
-            "seller": product.farmer.full_name
-        }
+            "seller": product.farmer.full_name if product.farmer else None
+        })
         
-        return jsonify(product_details), 200
+        return response, 200
     
     except Exception as e:
-        logger.error(f"Failed to fetch product by id: {str(e)}")
-        return jsonify({"error": "internal server error"}), 500
-    
+        logger.error(f"endpoint error: {str(e)}")
+        return jsonify({
+            "message": "failed to fetch product, internal server error",
+            "error": str(e)
+        }), 500
+
 @products.route('/api/v1/products/delete/<int:id>', methods=['DELETE'])
-@farmer_required
+@jwt_required()
+@farmer_required    
 def delete_product(id: int):
     """
-    delete a product for the current farmer
+    delete a product
 
     Args:
-        id (int): product unique identifier
+        id (int): product identifier
     """
     try:
-        user_id = get_current_user_id()
-        farmer = Farmer.query.get(user_id)
-        if not farmer:
-            logger.error(f"farmer not found: {user_id}")
-            return jsonify({"Error": "farmer not found"}), 400
+        farmer_id = get_jwt_identity()
+        product = Product.query.get_or_404(id)
+        if product.farmer_id != farmer_id:
+            return jsonify({"error": "unauthorized access"}), 401
         
-        product = Product.query.get(id)
-        if not product:
-            logger.error(f"product not found: {id}")
-            return jsonify({"error": "product not found"}), 404
+        try:
+            db.session.delete(product)
+            db.session.commit()
+            
+            response = jsonify({
+                
+                "success": True,
+                "message": "product has been deleted"
+            })
+            return response, 200
         
-        if product.farmer_id != user_id:
-            logger.error(f"unauthorized access by: {user_id} for product: {id}")
-            return jsonify({"error": "unauthorized"}), 401
-        
-        db.session.delete(product)
-        db.session.commit()
-        
-        logger.info(f"product deleted successfully: {product.name} (ID: {product.id})")
-        return jsonify({"error": f"product {product.name} has been deleted"}), 200
-    
+        except SQLAlchemyError as e:
+            logger.error(f"database error: {str(e)}")
+            db.session.rollback()
+            return jsonify({
+                "message": "failed to delete the product",
+                "error": str(e)
+            }), 400
+            
     except Exception as e:
-        logger.error(f"error deleting product: {str(e)}")
-        db.session.rollback()
-        return jsonify({"error": "internal server error"}), 500
+        logger.error(f"endpoint error: {str(e)}")
+        return jsonify({
+            "message": "internal server error",
+            "error": str(e)
+        }), 500

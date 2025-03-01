@@ -57,6 +57,7 @@ def get_dashboard_stats():
         logger.error(f"Error in get_dashboard_stats: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
+
 @dashboard.route('/api/dashboard/recent-orders', methods=['GET'])
 @farmer_required
 def get_recent_orders():

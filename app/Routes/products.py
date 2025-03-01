@@ -1,94 +1,67 @@
 from flask import Blueprint, jsonify, request
 from ..models import db, Product, Farmer
-from ..wrappers import farmer_required, buyer_required
-from ..extensions import get_current_user_id, cache
-from sqlalchemy import func
-from typing import Dict, Any
-import logging
+from ..wrappers import farmer_required
+from ..extensions import validate_product_data, cache, logger
+from sqlalchemy.exc import SQLAlchemyError
 from decimal import Decimal
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 products = Blueprint('products', __name__)
-logger = logging.getLogger(__name__)
 
-products = Blueprint('products', __name__)
 
-def validate_product_data(data: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    validate a products data
-    returns a dictionary with validated data or raises an exception
-    """
-    name = data.get('name', '').strip()
-    description = data.get('description', '').strip()
-    price_per_unit = data.get('price_per_unit')
-    amount_available = data.get('amount_available')
-    category = data.get('category', '').strip().lower()
-    
-    if not all([name, description, price_per_unit, category]):
-        return ValueError("All fields are required")
-    
-    try:
-        price_per_unit = Decimal(str(price_per_unit))
-        amount_available = int(amount_available)
-    except (ValueError, TypeError):
-        raise ValueError("Invalid price or amount")
-    
-    if price_per_unit <= 0 or amount_available < 0:
-        raise ValueError("Price and amount must be greater than or equal to 0")
-    
-    return {
-        "name": name,
-        "description": description,
-        "price_per_unit": price_per_unit,
-        "amount_available": amount_available,
-        "category": category
-    }
-    
 @products.route('/api/v1/products/add', methods=['POST'])
+@jwt_required()
 @farmer_required
 def add_product():
     """
     add a new product for the current farmer
     """
     try:
+        farmer_id = get_jwt_identity()
+        farmer = Farmer.query.get_or_404(farmer_id)
+        
         data = request.get_json()
         if not data:
-            logger.error("no data provided in the request")
-            return jsonify({"error": "no data provided"}), 400
-        
-        user_id = get_current_user_id()
-        farmer = Farmer.query.get(user_id)
-        if not farmer:
-            logger.error(f"farmer not found: {user_id}")
-            return jsonify({"error": "Farmer not found"}), 404
+            return jsonify({"error": "no data provided in the request"}), 400
         
         try:
             validated_data = validate_product_data(data)
         except ValueError as e:
-            logger.error(f"validation error: {str(e)}")
-            return jsonify({"error": str(e)}), 400
+            return jsonify({"error": str(e)})
         
-        new_product = Product(
-            name=validated_data["name"],
-            description=validated_data["description"],
-            price_per_unit=validated_data["price_per_unit"],
-            amount_available=validated_data["amount_available"],
-            category=validated_data["category"],
-            farmer_id=user_id
-        )
+        try:
+            new_product = Product(
+                name=validated_data["name"],
+                description=validated_data["description"],
+                price_per_unit=validated_data["price_per_unit"],
+                amount_available=validated_data["amount_available"],
+                category=validated_data["category"]
+                farmer_id=farmer_id
+            )
+            db.session.add(new_product)
+            db.session.commit()
+            
+            response = jsonify({
+                "success": True,
+                "message": "product added successfully",
+                "product_id": new_product.id
+            })
+            return response, 201
         
-        db.session.add(new_product)
-        db.session.commit()
-        
-        logger.info(f"product added successfully: {new_product.name}")
-        return jsonify({
-            "success": "product added successfully",
-            "product_id": new_product.id
-        }), 201
-        
+        except SQLAlchemyError as e:
+            logger.error(f"database error: {str(e)}")
+            db.session.rollback()
+            return jsonify({
+                "message": "failed to add product",
+                "error": str(e)
+            }), 400
+            
     except Exception as e:
-        logger.error(f"failed to add product: {str(e)}")
-        db.session.rollback()
-        return jsonify({"error": "Internal server error"}), 500
+        logger.error(f"endpoint error: {str(e)}")
+        return jsonify({
+            "message": "internal server error",
+            "error": str(e)
+        }), 500
     
 @products.route('/api/v1/products', methods=['GET'])
 def view_products():
@@ -220,7 +193,9 @@ def update_product(id: int):
         logger.error(f"error updating product: {str(e)}")
         db.session.rollback()
         return jsonify({"error": "internal server error"}), 500
-    
+
+
+
 @products.route('/api/v1/products/category/<string:category>', methods=['GET'])
 def view_by_category(category: str):
     """

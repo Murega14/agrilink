@@ -8,11 +8,8 @@ from ..models import (db,
                       Farmer)
 from decimal import Decimal
 from ..wrappers import buyer_required, farmer_required
-from ..extensions import get_current_user_id
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from ..extensions import logger, get_current_user_id
+from sqlalchemy.exc import SQLAlchemyError
 
 orders = Blueprint('orders', __name__)
 
@@ -20,168 +17,168 @@ orders = Blueprint('orders', __name__)
 @buyer_required
 def get_orders():
     """
-    Fetch all orders for the current buyer, including order items.
+    fetch all orders for the current buyer
+
+    Returns:
+        Response: JSON response containing the list of orders and pagination details.
     """
     try:
-        user_id = get_current_user_id()
-        buyer = Buyer.query.get(user_id)
+        buyer_id = get_current_user_id()
         
-        if not buyer:
-            logger.error(f"Buyer not found: {user_id}")
-            return jsonify({"error": "Buyer not found"}), 404
-        
-        # Get pagination parameters from the request
+        # set up pagination
         page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 10, type=int)
-
-        if page <= 0 or per_page <= 0:
-            logger.error(f"Invalid pagination parameters: page={page}, per_page={per_page}")
-            return jsonify({"error": "Page and per_page must be greater than 0"}), 400
+        per_page = request.args.get('per_page', 8, type=int)
         
-        # Fetch orders with pagination
-        orders_query = Order.query.filter_by(buyer_id=user_id)
+        #fetch the orders and include pagination
+        orders_query = Order.query.filter_by(buyer_id=buyer_id)
         pagination = orders_query.paginate(page=page, per_page=per_page)
         orders = pagination.items
         
-        # Build the response with order details and items
-        order_list = []
-        for order in orders:
-            order_details = {
-                "id": order.id,
-                "total_amount": float(order.total_amount),
-                "order_date": order.created_at.isoformat(),
-                "delivery_date": order.delivery_date.isoformat() if order.delivery_date else None,
-                "status": order.status,
-                "items": []
-            }
-            
-            # Add order items to the order details
-            for item in order.order_items:
-                product = item.product
-                item_details = {
-                    "product_id": product.id,
-                    "product_name": product.name,
-                    "quantity": item.quantity,
-                    "price_per_unit": float(item.price_per_unit),
-                    "subtotal": float(item.calculate_item_total),
-                    "farmer_name": product.farmer.full_name
-                }
-                order_details["items"].append(item_details)
-            
-            order_list.append(order_details)
+        order_list = [{
+            "id": order.id,
+            "total_amount": float(order.total_amount),
+            "order_date": order.created_at.isoformat(),
+            "delivery_date": order.delivery_date.isoformat() if order.delivery_date else None,
+            "status": order.status,
+            "items": [{
+                "product_id": item.product.id,
+                "product_name": item.product.name,
+                "quantity": item.quantity,
+                "price_per_unit": float(item.price_per_unit),
+                "subtotal": float(item.calculate_item_total()),
+                "farmer_name": item.product.farmer.full_name if item.product.farmer else None
+            } for item in order.order_items]
+        } for order in orders]
         
-        # Return paginated response
-        return jsonify({
+        response = jsonify({
             "orders": order_list,
             "page": pagination.page,
             "per_page": pagination.per_page,
             "total_pages": pagination.pages,
             "total_items": pagination.total
-        }), 200
+        })
+        
+        return response, 200
     
     except Exception as e:
-        logger.error(f"Error fetching orders: {str(e)}", exc_info=True)
-        return jsonify({"error": "Internal server error"}), 500
-
-
+        logger.error(f"endpoint error: {str(e)}")
+        return jsonify({
+            "message": "failed to fetch orders",
+            "error": str(e)
+        }), 500
 
 @orders.route('/api/v1/orders/create', methods=['POST'])
-@buyer_required
+@buyer_required    
 def make_order():
     """
-    create a new order for the current buyer
+    Create a new order for the current buyer.
+
+    The function expects a JSON payload with order items, validates the data, 
+    and creates an order along with associated farmer orders and order items.
+
+    Returns:
+        Response: JSON response with success message or error details.
     """
     try:
-        user_id = get_current_user_id()
-        buyer = Buyer.query.get(user_id)
-        
-        if not buyer:
-            logger.error(f"Buyer not found: {user_id}")
-            return jsonify({"error": "Buyer not found"}), 404
-        
+        buyer_id = get_current_user_id()
         data = request.get_json()
         if not data or 'items' not in data:
-            logger.error("Invalid request data")
-            return jsonify({"error": "Invalid request data"}), 400
+            return jsonify({"error": "invalid request"}), 400
         
-        new_order = Order(buyer_id=user_id, total_amount=0, status='pending')
-        db.session.add(new_order)
-        db.session.flush()
-        
-        if not new_order.id:
-            logger.error("Failed to create order")
+        try:
+            new_order = Order(buyer_id=buyer_id, total_amount=0, status='pending')
+            db.session.add(new_order)
+            db.session.flush()
+        except SQLAlchemyError as e:
+            logger.error(f"database error, trying to initialize order: {str(e)}")
             db.session.rollback()
-            return jsonify({"error": "Failed to create order"}), 500
-        
+            return jsonify({
+                "message": "failed to initialize order",
+                "error": str(e)
+            }), 400
+            
         farmer_orders = {}
         total_amount = Decimal('0')
         
-        for item in data['items']:
-            product_id = item.get('product_id')
-            quantity = item.get('quantity', 0)
-            
-            if not product_id or quantity <= 0:
-                logger.error(f"Invalid item data: {item}")
-                db.session.rollback()
-                return jsonify({"error": "Invalid item data"}), 400
-            
-            product = Product.query.get(product_id)
-            if not product:
-                logger.error(f"Product not found: {product_id}")
-                db.session.rollback()
-                return jsonify({"error": "product not found"}), 400
-            
-            if quantity > product.amount_available:
-                logger.error(f"Insufficient quantity only {product.amount_available} available")
-                db.session.rollback()
-                return jsonify({"error": "insufficient quantity for product {product_id} only {product.amount_available} available"}), 400
-            
-            farmer_order = farmer_orders.get(product.farmer_id)
-            if not farmer_order:
-                farmer_order = FarmerOrder(
-                    order_id=new_order.id,
-                    farmer_id=product.farmer_id,
-                    subtotal_amount=Decimal('0')
-                )
-                db.session.add(farmer_order)
-                db.session.flush()
+        try:
+            for item in data['items']:
+                product_id = item.get('product_id')
+                quantity = item.get('quantity', 0)
                 
-                if not farmer_order.id:
-                    logger.error(f"failed to create the farmer order")
+                product = Product.query.get_or_404(product_id)
+                if quantity <= 0:
+                    return jsonify({"error": "quantity must be greater than zero"}), 400
+                
+                if quantity > product.amount_available:
+                    return jsonify({"message": f"only {product.amount_available} is available"}), 400
+                
+                farmer_order =farmer_orders.get(product.farmer_id)
+                if not farmer_order:
+                    try:
+                        farmer_order = FarmerOrder(
+                        order_id=new_order.id,
+                        farmer_id=product.farmer_id,
+                        subtotal_amount=0
+                        )
+                        db.session.add(farmer_order)
+                        db.session.flush()
+                    except SQLAlchemyError as e:
+                        logger.error(f"failed to create farmer order: {str(e)}")
+                        db.session.rollback()
+                        return jsonify({
+                            "message": "failed to create farmer order",
+                            "error": str(e)
+                        })
+                    
+                    farmer_orders[product.farmer_id] = farmer_order
+                    
+                try:
+                    order_item = OrderItem(
+                        order_id=new_order.id,
+                        farmer_order_id=farmer_order.id,
+                        product_id=product.id,
+                        quantity=quantity,
+                        price_per_unit=product.price_per_unit
+                    )
+                    db.session.add(order_item)
+                    
+                    product.amount_available -= quantity
+                    item_total = Decimal(quantity) * product.price_per_unit
+                    total_amount += item_total
+                    farmer_order.subtotal_amount += item_total
+                except SQLAlchemyError as e:
+                    logger.error(f"failed to additems to the order: {str(e)}")
                     db.session.rollback()
-                    return jsonify({"error": "Failed to create farmer order"}), 500
-                
-                farmer_orders[product.farmer_id] = farmer_order
-                
-            order_item = OrderItem(
-                order_id=new_order.id,
-                farmer_order_id=farmer_order.id,
-                product_id=product.id,
-                quantity=quantity,
-                price_per_unit=product.price_per_unit
-            )
-            db.session.add(order_item)
+                    return jsonify({
+                        "message": "Failed to add order items",
+                        "error": str(e)
+                    }), 400
+                    
+            new_order.total_amount = total_amount
+            db.session.commit()
             
-            product.amount_available -= quantity
-            item_total = Decimal(str(quantity)) * product.price_per_unit
-            total_amount += item_total
-            farmer_order.subtotal_amount += item_total
+            response = jsonify({
+                "success": True,
+                "message": "order created successfully"
+            })
+            return response, 201
+        
+        except SQLAlchemyError as e:
+            logger.error(f"database error: {str(e)}")
+            db.session.rollback()
+            return jsonify({
+                "message": "failed to create order",
+                "error": str(e)
+            }), 400
             
-        new_order.total_amount = total_amount
-        db.session.commit()
-        
-        logger.info(f"Order created successfully: {new_order.id}")
-        return jsonify({
-            "message": "order created successfully",
-            "order_id": new_order.id,
-            "buyer_id": buyer.id
-        }), 201
-        
     except Exception as e:
-        logger.error(f"Error creating order: {str(e)}")
-        db.session.rollback()
-        return jsonify({"error": "Internal server error"}), 500
-    
+        logger.error(f"endpoint error: {str(e)}")
+        return jsonify({
+            "message": "internal server error",
+            "error": str(e)
+        }), 500
+        
+
 @orders.route('/api/v1/orders/<int:order_id>', methods=['GET'])
 @buyer_required
 def get_order_details(order_id):

@@ -221,7 +221,7 @@ def signup_buyer():
             "error": str(e)
         }), 500
 
-@authentication.route('/api/v1/login/farmer', methods=['GET'])
+@authentication.route('/api/v1/login/farmer', methods=['POST'])
 def login_farmer():
     try:
        
@@ -284,7 +284,7 @@ def login_farmer():
             "error": str(e)
         }), 500
 
-@authentication.route('/api/v1/login/buyer', methods=['GET'])
+@authentication.route('/api/v1/login/buyer', methods=['POST'])
 def login_buyer():
     try:
         

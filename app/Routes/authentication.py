@@ -233,7 +233,7 @@ def login_farmer():
             return jsonify({"error": "missing required fields"}), 400
         
         try:
-            farmer = Farmer.query.filter((Farmer.email==identifier) or (Farmer.phone_number==identifier)).first()
+            farmer = Farmer.query.filter((Farmer.email==identifier) | (Farmer.phone_number==identifier)).first()
             
             if not farmer or not farmer.check_password(password):
                 return jsonify({"error": "invalid login credentials"}),401
@@ -296,7 +296,7 @@ def login_buyer():
             return jsonify({"error": "missing fields required"}), 400
         
         try:
-            buyer = Buyer.query.filter((Buyer.email==identifier) or (Buyer.phone_number==identifier)).first()
+            buyer = Buyer.query.filter((Buyer.email==identifier) | (Buyer.phone_number==identifier)).first()
             
             if not buyer or not buyer.check_password(password):
                 return jsonify({"error": "invalid login credentials"}), 401

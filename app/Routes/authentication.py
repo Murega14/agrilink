@@ -224,9 +224,7 @@ def signup_buyer():
 @authentication.route('/api/v1/login/farmer', methods=['GET'])
 def login_farmer():
     try:
-        if not request.is_json():
-            return jsonify({"error": "request should contain JSON"}), 400
-        
+       
         data = request.get_json()
         identifier = data.get('identifier')
         password = data.get('password')
@@ -289,8 +287,6 @@ def login_farmer():
 @authentication.route('/api/v1/login/buyer', methods=['GET'])
 def login_buyer():
     try:
-        if not request.is_json:
-            return jsonify({"Error": "request needs to be in json"}), 403
         
         data = request.get_json()
         identifier = data.get('identifier')

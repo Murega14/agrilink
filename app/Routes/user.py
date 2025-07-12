@@ -13,7 +13,7 @@ def get_user():
     try:
         user_id = get_jwt_identity()
         
-        user = Buyer.query.get_or_404(user_id)
+        user = Buyer.query.get_or_404(user_id.get('id'))
         
         user_data = {
             "id": user.id,

@@ -10,11 +10,12 @@ from decimal import Decimal
 from ..wrappers import buyer_required, farmer_required
 from ..extensions import logger, get_current_user_id
 from sqlalchemy.exc import SQLAlchemyError
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 orders = Blueprint('orders', __name__)
 
 @orders.route('/api/v1/orders', methods=['GET'])
-@buyer_required
+@jwt_required()
 def get_orders():
     """
     fetch all orders for the current buyer
@@ -23,7 +24,8 @@ def get_orders():
         Response: JSON response containing the list of orders and pagination details.
     """
     try:
-        buyer_id = get_current_user_id()
+        id = get_jwt_identity()
+        buyer_id = id.get('id')
         
         # set up pagination
         page = request.args.get('page', 1, type=int)
@@ -45,7 +47,7 @@ def get_orders():
                 "product_name": item.product.name,
                 "quantity": item.quantity,
                 "price_per_unit": float(item.price_per_unit),
-                "subtotal": float(item.calculate_item_total()),
+                "subtotal": float(item.quantity * item.price_per_unit),  # Calculate subtotal directly
                 "farmer_name": item.product.farmer.full_name if item.product.farmer else None
             } for item in order.order_items]
         } for order in orders]
@@ -68,7 +70,7 @@ def get_orders():
         }), 500
 
 @orders.route('/api/v1/orders/create', methods=['POST'])
-@buyer_required    
+@jwt_required()    
 def make_order():
     """
     Create a new order for the current buyer.
@@ -80,13 +82,13 @@ def make_order():
         Response: JSON response with success message or error details.
     """
     try:
-        buyer_id = get_current_user_id()
+        buyer_id = get_jwt_identity()
         data = request.get_json()
         if not data or 'items' not in data:
             return jsonify({"error": "invalid request"}), 400
         
         try:
-            new_order = Order(buyer_id=buyer_id, total_amount=0, status='pending')
+            new_order = Order(buyer_id=buyer_id.get('id'), total_amount=0, status='pending')
             db.session.add(new_order)
             db.session.flush()
         except SQLAlchemyError as e:
@@ -282,4 +284,3 @@ def get_farmer_orders():
     except Exception as e:
         logger.error(f"error fetching farmer orders: {str(e)}")
         return jsonify({"error": "internal server error"}), 500
-    

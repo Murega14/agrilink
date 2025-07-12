@@ -17,8 +17,8 @@ def buyer_required(function):
     def wrapper(*args, **kwargs):
         verify_jwt_in_request()
         identity = get_jwt_identity()
-        if not isinstance(identity, dict) or identity.get('role') != 'buyer':
-            return jsonify({"error": "Buyer access required"}), 403
+        if identity.get('role') != 'buyer':
+            return jsonify({"error": "buyer access required"}), 403
         return function(*args, **kwargs)
     return wrapper
 
